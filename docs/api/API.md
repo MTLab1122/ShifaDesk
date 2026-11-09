@@ -767,6 +767,88 @@ Direct testing endpoint simulating incoming user messages in the playground simu
 - **Body:** `{ "message": "...", "clinicId": "UUID" }`.
 - **Response `200 OK`:** `{ "response": "...", "intent": "...", "outcome": "..." }`.
 
+---
+
+## 12. Notification Orchestration, Automated Reminders & Workflow Engine (Phase 8)
+
+### `GET /api/v1/notifications`
+Queries notification jobs ledger with tenancy filters and pagination.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+- **Query Parameters:** `clinicId`, `channel`, `eventType`, `status`, `recipientId`, `relatedEntityType`, `relatedEntityId`, `startDate`, `endDate`, `page`, `limit`.
+- **Response `200 OK`:** Paginated `NotificationJob` objects with associated `attemptLogs` and `template`.
+
+### `GET /api/v1/notifications/analytics`
+Fetches high-level notification delivery metrics and breakdown.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Query Parameters:** `clinicId` (optional).
+- **Response `200 OK`:** `NotificationAnalytics` with `totalJobs`, `sentCount`, `deliveredCount`, `deliverySuccessRate`, `suppressedCount`, `failedCount`, and channel/status/event breakdown.
+
+### `GET /api/v1/notifications/:id`
+Retrieves granular job detail including full attempt audit trail and lifecycle events.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+
+### `POST /api/v1/notifications/:id/retry`
+Forces immediate re-dispatch of a failed or dead-lettered notification job.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:** `{ "force": true }`.
+- **Response `200 OK`:** Updated `NotificationJob`.
+
+### `POST /api/v1/notifications/:id/cancel`
+Cancels a scheduled or pending reminder job.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:** `{ "reason": "Patient requested cancellation" }`.
+- **Response `200 OK`:** Cancelled `NotificationJob`.
+
+### `GET /api/v1/notification-preferences`
+Retrieves communication preferences and consent status for a patient or user.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`, `PATIENT`.
+- **Query Parameters:** `patientId`, `userId`.
+
+### `POST /api/v1/notification-preferences`
+Saves or updates channel consent settings.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `PATIENT`.
+- **Body:** `SaveNotificationPreferenceDto`.
+
+### `POST /api/v1/notification-preferences/opt-out`
+Records explicit opt-out suppression for a channel.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `PATIENT`.
+- **Body:** `OptOutNotificationPreferenceDto`.
+
+### `GET /api/v1/notification-rules`
+Lists event routing rules, schedule offsets, quiet hours policies, and fallback channels.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Query Parameters:** `clinicId`.
+
+### `POST /api/v1/notification-rules` & `PUT /api/v1/notification-rules/:id` & `DELETE /api/v1/notification-rules/:id`
+CRUD operations for clinic operational notification rules.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+
+### `GET /api/v1/notification-templates`
+Lists reusable multilingual message templates.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+- **Query Parameters:** `clinicId`.
+
+### `POST /api/v1/notification-templates` & `PUT /api/v1/notification-templates/:id` & `DELETE /api/v1/notification-templates/:id`
+CRUD operations for notification templates.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+
+### `POST /api/v1/notification-templates/preview`
+Renders template body and subject with test variable values.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:** `PreviewNotificationTemplateDto`.
+
+### `GET /api/v1/in-app-notifications`
+Lists in-app notifications for the authenticated user.
+- **Query Parameters:** `unreadOnly`, `category`, `page`, `limit`.
+
+### `GET /api/v1/in-app-notifications/unread-count`
+Returns unread count badge for dashboard topbar.
+- **Response `200 OK`:** `{ "unreadCount": 3 }`.
+
+### `POST /api/v1/in-app-notifications/:id/read` & `POST /api/v1/in-app-notifications/read-all`
+Marks single or all in-app notifications as read for current user.
+
+
 
 
 

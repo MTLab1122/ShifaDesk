@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { UserRole } from '@matabai/shared';
 import { Language, LANGUAGES } from '@/lib/i18n';
 import { Badge } from '@/components/ui/badge';
+import { ApiClient } from '@/lib/api-client';
 import {
   Activity,
   LayoutDashboard,
@@ -183,6 +184,25 @@ export default function DashboardLayout({
 
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchUnread = async () => {
+      try {
+        const res = await ApiClient.inApp.getUnreadCount();
+        if (isMounted) setUnreadCount(res.unreadCount || 0);
+      } catch {
+        // Silently skip if unauthenticated or network error
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Filter navigation items by active role
   const visibleNavItems = NAV_ITEMS.filter((item) =>
@@ -344,7 +364,13 @@ export default function DashboardLayout({
               className="relative p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-clinical-500 animate-pulse" />
+              {unreadCount > 0 ? (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-clinical-600 px-1 text-[9px] font-bold text-white shadow-sm">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              ) : (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-clinical-500 animate-pulse" />
+              )}
             </Link>
 
             {/* User Profile Pill */}

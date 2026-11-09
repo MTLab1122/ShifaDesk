@@ -2,7 +2,7 @@
 
 Founder: **Muhammad Talha**  
 Project: **MatabAI (ShifaDesk)**  
-Current Status: **Phases 0 through 7 Verified & Complete**
+Current Status: **Phases 0 through 8 Verified & Complete**
 
 ---
 
@@ -17,8 +17,69 @@ Current Status: **Phases 0 through 7 Verified & Complete**
 | **4** | **Appointment Scheduling & Booking Engine** | **VERIFIED** | Real database persistence, doctor weekly working hours, schedule exceptions/leaves, dynamic timezone slot generation, double-booking prevention under concurrency, state machine transitions, guided booking wizards, calendar/table views, 68 backend tests (100% passing). Committed (`6111058`). |
 | **5** | **Digital Token & Real-Time Queue Management** | **VERIFIED** | Real database persistence, atomic token generation, appointment & walk-in check-in, deterministic queue ordering (priority + FIFO), doctor & receptionist calling controls, real-time events, public TV monitor display, patient live queue tracker, 87 backend tests (100% passing). Committed (`9b37bd6`). |
 | **6** | **WhatsApp Business Cloud API Integration** | **VERIFIED** | Official Meta Graph API v21.0 client, secure webhook verification (HMAC-SHA256 timing-safe), event deduplication, 24-hr service window enforcement, opt-in/opt-out consent tracking, human receptionist handover, appointment/queue notifications, 117 tests passing (100%). Committed (`756c250`). |
-| **7** | **AI-Powered Multilingual Receptionist** | **VERIFIED** | Multilingual NLU (EN, UR, PS, Roman Urdu, Roman Pashto), 21 administrative intents, strict medical safety boundaries (ZERO medical advice), immediate emergency guidance & escalation to Rescue 1122, multi-turn booking with explicit confirmation, 11 allowlisted server tools, audit ledger, and interactive web dashboard. All 151 tests passing (100%). |
-| **8** | **Diagnostic Laboratory, Pathology & Financial Analytics** | ⏸️ NEXT | Founder sign-off of Phase 7 deliverables. |
+| **7** | **AI-Powered Multilingual Receptionist** | **VERIFIED** | Multilingual NLU (EN, UR, PS, Roman Urdu, Roman Pashto), 21 administrative intents, strict medical safety boundaries (ZERO medical advice), immediate emergency guidance & escalation to Rescue 1122, multi-turn booking with explicit confirmation, 11 allowlisted server tools, audit ledger, and interactive web dashboard. All 151 tests passing (100%). Committed (`a1b3736`). |
+| **8** | **Notification Orchestration, Automated Reminders & Workflow Engine** | **VERIFIED** | Centralized notification engine: WhatsApp (Meta Cloud API), Persistent In-App dashboard alerts, real Email & SMS adapters (unconfigured detection without simulated delivery), appointment reminders (-24h, -2h), invalidation on reschedule/cancellation, quiet hours enforcement (clinic timezone based), opt-in/opt-out keyword handling, atomic worker claiming with stale lock recovery, dead-letter state, and interactive notification dashboard. All 25 test suites (167 tests) passing (100%). |
+| **9** | **Diagnostic Laboratory, Pathology & Financial Analytics** | ⏸️ NEXT | Founder sign-off of Phase 8 deliverables. |
+
+---
+
+## 📋 Phase 8 Execution Checklist (Complete & Verified)
+
+### Database Schema & Security
+- [x] Prisma models: `NotificationPreference`, `NotificationRule`, `NotificationTemplate`, `NotificationJob`, `NotificationAttempt`, `NotificationEvent`, `InAppNotification`
+- [x] Back-relations connected to `Organization`, `Clinic`, `UserProfile`, and `Patient`
+- [x] Row Level Security (RLS) policies implemented for all 7 Phase 8 tables in `infrastructure/database/rls-policies.sql`
+- [x] Generated Prisma Client v6.19.3 (`pnpm run db:generate`)
+
+### Shared Packages & Validation
+- [x] `@matabai/shared`: Enums (`NotificationChannel`, `NotificationEventType`, `NotificationJobStatus`, `NotificationPriority`, `QuietHoursPolicy`, `FallbackPolicy`, `TemplateApprovalStatus`, `InAppCategory`, `NotificationConsentStatus`, `NotificationConsentSource`, `NotificationAttemptStatus`), permissions (`NOTIFICATION_READ`, `NOTIFICATION_WRITE`, `NOTIFICATION_MANAGE`, `NOTIFICATION_PREFERENCE_WRITE`), role matrix mappings, and entity interfaces
+- [x] `@matabai/validation`: Zod schemas for preference CRUD & opt-out, notification rules, templates, job queries, retries, cancellations, and in-app notifications
+- [x] Built packages cleanly with `pnpm run build:packages` (0 errors)
+
+### Channel Adapters & Zero Fake Simulation
+- [x] `ChannelAdapter` interface and delivery contract
+- [x] `WhatsAppAdapter`: Dispatches via `WhatsAppOutboundService` / `MetaApiClient` (HSM templates or 24-hr session text)
+- [x] `InAppAdapter`: Persistent in-app notifications for authenticated dashboard staff
+- [x] `EmailAdapter`: Real integration checking `RESEND_API_KEY` or `SMTP_HOST`; returns explicit `EMAIL_PROVIDER_UNCONFIGURED` without fake delivery simulation
+- [x] `SmsAdapter`: Real integration checking `TWILIO` credentials; returns explicit `SMS_PROVIDER_UNCONFIGURED` without fake delivery simulation
+
+### Core Workflow & Dispatch Services
+- [x] `NotificationTemplateService`: Multilingual rendering (EN, UR, PS) with variable interpolation, clinical safety sanitization, and preview endpoint
+- [x] `NotificationPreferenceService`: Channel consent checks, WhatsApp keyword consent parser (`STOP`, `START`, etc.), and clinic timezone-based quiet hours evaluation
+- [x] `NotificationRulesService`: Event rule resolution, priority, quiet hours policy (`ALLOW_IMMEDIATE`, `QUEUE_UNTIL_MORNING`, `SUPPRESS`), and fallback channels
+- [x] `NotificationSchedulerService`:
+  - Immediate confirmations on `APPOINTMENT_BOOKED` / `APPOINTMENT_CONFIRMED`
+  - Future appointment reminders (-1440m, -120m) with past offset suppression
+  - Invalidation: automatic cancellation of pending reminders on reschedule or cancellation
+  - Queue notifications on `TOKEN_GENERATED`, `TOKEN_CALLED`, and `QUEUE_DELAYED`
+  - Staff operational alerts broadcast to clinic admins and receptionists
+- [x] `NotificationDispatcherService`: Atomic dispatch execution, consent/quiet-hours evaluation, channel dispatch, fallback routing, and attempt auditing
+- [x] `NotificationRetryService`: Bounded exponential backoff with random jitter, transitioning to `DEAD_LETTER` upon exhausting `maxAttempts`
+- [x] `NotificationWorkerService`: Background polling worker with atomic batch claiming and stale lock recovery
+
+### API Controllers & Endpoints
+- [x] `NotificationController`: `/api/v1/notifications` (list, get, analytics, retry, cancel)
+- [x] `NotificationPreferenceController`: `/api/v1/notification-preferences` (get, save, opt-out)
+- [x] `NotificationRuleController`: `/api/v1/notification-rules` (CRUD for clinic rules)
+- [x] `NotificationTemplateController`: `/api/v1/notification-templates` (CRUD & live preview)
+- [x] `InAppNotificationController`: `/api/v1/in-app-notifications` (list, unread count, mark read, mark all read)
+
+### Frontend UI/UX
+- [x] Added `ApiClient.notifications`, `ApiClient.notificationRules`, `ApiClient.notificationTemplates`, `ApiClient.notificationPreferences`, and `ApiClient.inApp`
+- [x] Live unread count badge on the Dashboard topbar notification bell in `apps/web/app/(dashboard)/layout.tsx`
+- [x] Notification Dashboard Page (`/dashboard/notifications`):
+  - Overview KPI metrics: Total Messages, Dispatched, Delivery Rate %, Scheduled Reminders, Dead Letter / Failed, Suppressed
+  - History & Delivery Log with channel/event/status filters, attempt audit modal, and retry action
+  - Scheduled Reminders pipeline with cancel prompt
+  - Dead-Letter / Failed Queue with Force Retry action
+  - Rules & Quiet Hours management
+  - Multilingual Templates directory & interactive live template preview tester
+  - Staff In-App Feed with mark as read controls
+
+### Verification & Testing
+- [x] All 25 test suites (167 tests) passing at 100%
+- [x] Frontend and backend typecheck clean (0 errors)
+- [x] Next.js production build succeeded with all 30 routes built cleanly
 
 ---
 

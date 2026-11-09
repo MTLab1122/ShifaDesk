@@ -489,4 +489,113 @@ Controlled execution audit of allowlisted tool invocations.
 | `execution_duration_ms`| `INT` | NOT NULL | Duration in ms |
 | `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
 
+---
+
+## Phase 8 Schema: Notification Orchestration & Workflow Engine
+
+### 1. `notification_preferences`
+Patient and staff communication preferences, consent tracking, and opt-out timestamps.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `patient_id` | `UUID` | Nullable, FK -> `patients(id)` | Patient reference |
+| `user_id` | `UUID` | Nullable, FK -> `user_profiles(id)` | Staff/user reference |
+| `channel` | `VARCHAR(20)` | NOT NULL | `WHATSAPP`, `IN_APP`, `EMAIL`, `SMS` |
+| `enabled` | `BOOLEAN` | Default `true` | Enabled switch |
+| `consent_status` | `VARCHAR(20)` | Default `'OPTED_IN'` | `OPTED_IN`, `OPTED_OUT`, `UNKNOWN` |
+| `consent_source` | `VARCHAR(50)` | Default `'ADMIN'` | `WHATSAPP_KEYWORD`, `PATIENT_PORTAL`, `RECEPTIONIST_VERBAL`, `ADMIN` |
+| `consent_timestamp` | `TIMESTAMPTZ` | Default `now()` | Consent capture time |
+| `opted_out_at` | `TIMESTAMPTZ` | Nullable | Opt-out timestamp |
+
+### 2. `notification_rules`
+Configurable routing, timing offsets, quiet hours policies, and fallback channels.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `event_type` | `VARCHAR(50)` | NOT NULL | Event trigger (`APPOINTMENT_CONFIRMED`, `APPOINTMENT_REMINDER`, `TOKEN_CALLED`, etc.) |
+| `channel` | `VARCHAR(20)` | NOT NULL | `WHATSAPP`, `IN_APP`, `EMAIL`, `SMS` |
+| `template_id` | `UUID` | Nullable, FK -> `notification_templates(id)` | Template reference |
+| `enabled` | `BOOLEAN` | Default `true` | Active switch |
+| `schedule_offset_minutes` | `INT` | Default `0` | Offset minutes (`-1440` = 24h before, `-120` = 2h before, `0` = immediate) |
+| `priority` | `VARCHAR(20)` | Default `'NORMAL'` | `LOW`, `NORMAL`, `HIGH`, `URGENT` |
+| `quiet_hours_policy` | `VARCHAR(30)` | Default `'ALLOW_IMMEDIATE'` | `ALLOW_IMMEDIATE`, `QUEUE_UNTIL_MORNING`, `SUPPRESS` |
+| `fallback_policy` | `VARCHAR(20)` | Default `'NONE'` | `NONE`, `IN_APP`, `SMS`, `EMAIL` |
+
+### 3. `notification_templates`
+Multilingual message templates with variable replacement schema and provider mappings.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Optional clinic override |
+| `name` | `VARCHAR(100)` | NOT NULL | Descriptive template name |
+| `event_type` | `VARCHAR(50)` | NOT NULL | Event trigger |
+| `channel` | `VARCHAR(20)` | NOT NULL | Channel |
+| `language` | `VARCHAR(10)` | Default `'EN'` | `EN`, `UR`, `PS` |
+| `subject` | `VARCHAR(200)` | Nullable | Optional subject |
+| `message_body` | `TEXT` | NOT NULL | Template body with `{{var}}` placeholders |
+| `provider_template_name` | `VARCHAR(100)` | Nullable | Provider template mapping (e.g. Meta HSM name) |
+| `approval_status` | `VARCHAR(20)` | Default `'APPROVED'` | `APPROVED`, `PENDING`, `REJECTED`, `NOT_REQUIRED` |
+| `variables_schema` | `TEXT[]` | Default `[]` | Declared variable placeholders |
+| `enabled` | `BOOLEAN` | Default `true` | Enabled switch |
+
+### 4. `notification_jobs`
+Transactional outbox ledger of scheduled, processing, sent, retrying, and dead-lettered jobs.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `recipient_id` | `VARCHAR(100)` | NOT NULL | Recipient identifier (Patient UUID, User UUID, or phone) |
+| `recipient_type` | `VARCHAR(20)` | Default `'PATIENT'` | `PATIENT`, `STAFF`, `CONTACT` |
+| `event_type` | `VARCHAR(50)` | NOT NULL | Trigger event |
+| `channel` | `VARCHAR(20)` | NOT NULL | Channel |
+| `template_id` | `UUID` | Nullable, FK -> `notification_templates(id)` | Template reference |
+| `related_entity_type` | `VARCHAR(50)` | Nullable | `APPOINTMENT`, `QUEUE_TOKEN`, `CONVERSATION` |
+| `related_entity_id` | `VARCHAR(100)` | Nullable | Referenced entity ID |
+| `scheduled_at` | `TIMESTAMPTZ` | Default `now()` | Scheduled dispatch time |
+| `status` | `VARCHAR(30)` | Default `'PENDING'` | `PENDING`, `SCHEDULED`, `PROCESSING`, `SENT`, `DELIVERED`, `READ`, `FAILED`, `RETRYING`, `DEAD_LETTER`, `CANCELLED`, `SUPPRESSED` |
+| `idempotency_key` | `VARCHAR(200)` | UNIQUE | Idempotent dispatch key |
+| `payload` | `JSONB` | Default `'{}'` | Render variables and recipient context |
+| `attempts` | `INT` | Default `0` | Attempt counter |
+| `max_attempts` | `INT` | Default `3` | Maximum attempts before DEAD_LETTER |
+| `last_error` | `TEXT` | Nullable | Error message from last attempt |
+| `suppression_reason` | `TEXT` | Nullable | Reason if suppressed (opt-out, quiet hours, invalidated) |
+| `claimed_at` | `TIMESTAMPTZ` | Nullable | Worker atomic lock timestamp |
+| `claimed_by` | `VARCHAR(100)` | Nullable | Worker instance identifier |
+| `sent_at` | `TIMESTAMPTZ` | Nullable | Dispatch timestamp |
+
+### 5. `notification_attempts`
+Audit log of individual delivery attempts per notification job.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `notification_job_id` | `UUID` | FK -> `notification_jobs(id)` | Parent job reference |
+| `channel` | `VARCHAR(20)` | NOT NULL | Channel |
+| `provider` | `VARCHAR(50)` | NOT NULL | `meta_cloud_api`, `in_app`, `twilio_sms`, `resend` |
+| `provider_message_id` | `VARCHAR(128)` | Nullable | Provider message ID |
+| `attempt_number` | `INT` | NOT NULL | Attempt sequence |
+| `status` | `VARCHAR(30)` | NOT NULL | `SUCCESS`, `TEMPORARY_FAILURE`, `PERMANENT_FAILURE` |
+| `response_metadata` | `JSONB` | Nullable | Provider response payload |
+| `error_code` | `VARCHAR(50)` | Nullable | Provider error code |
+| `error_message` | `TEXT` | Nullable | Sanitized error message |
+| `attempted_at` | `TIMESTAMPTZ` | Default `now()` | Dispatch start time |
+| `completed_at` | `TIMESTAMPTZ` | Nullable | Dispatch finish time |
+
+### 6. `notification_events`
+Granular lifecycle event ledger for end-to-end observability (`QUEUED`, `CLAIMED`, `DISPATCHED`, `DELIVERED`, `READ`, `FAILED`, `RETRY_SCHEDULED`, `DEAD_LETTERED`, `CANCELLED`, `SUPPRESSED`).
+
+### 7. `in_app_notifications`
+Persistent dashboard alerts for authenticated staff and administrators with unread tracking.
+
+
 

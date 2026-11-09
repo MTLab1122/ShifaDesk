@@ -1,4 +1,19 @@
-import { UserRole, EntityStatus, MembershipStatus } from './enums.js';
+import {
+  UserRole,
+  EntityStatus,
+  MembershipStatus,
+  NotificationChannel,
+  NotificationEventType,
+  NotificationJobStatus,
+  NotificationPriority,
+  QuietHoursPolicy,
+  FallbackPolicy,
+  TemplateApprovalStatus,
+  InAppCategory,
+  NotificationConsentStatus,
+  NotificationConsentSource,
+  NotificationAttemptStatus,
+} from './enums.js';
 
 export interface Organization {
   id: string;
@@ -556,6 +571,144 @@ export interface AiUsageStats {
   languageBreakdown: Record<string, number>;
   topIntents: Array<{ intent: string; count: number }>;
 }
+
+export interface NotificationPreference {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  patientId?: string | null;
+  userId?: string | null;
+  channel: NotificationChannel | string;
+  enabled: boolean;
+  consentStatus: NotificationConsentStatus | string;
+  consentSource: NotificationConsentSource | string;
+  consentTimestamp: string;
+  optedOutAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient;
+  user?: UserProfile;
+}
+
+export interface NotificationRule {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  eventType: NotificationEventType | string;
+  channel: NotificationChannel | string;
+  templateId?: string | null;
+  enabled: boolean;
+  scheduleOffsetMinutes: number;
+  priority: NotificationPriority | string;
+  quietHoursPolicy: QuietHoursPolicy | string;
+  fallbackPolicy: FallbackPolicy | string;
+  createdAt: string;
+  updatedAt: string;
+  template?: NotificationTemplate;
+}
+
+export interface NotificationTemplate {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  name: string;
+  eventType: NotificationEventType | string;
+  channel: NotificationChannel | string;
+  language: string;
+  subject?: string | null;
+  messageBody: string;
+  providerTemplateName?: string | null;
+  approvalStatus: TemplateApprovalStatus | string;
+  variablesSchema: string[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationJob {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  recipientId: string;
+  recipientType: 'PATIENT' | 'STAFF' | 'CONTACT' | string;
+  eventType: NotificationEventType | string;
+  channel: NotificationChannel | string;
+  templateId?: string | null;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
+  scheduledAt: string;
+  status: NotificationJobStatus | string;
+  idempotencyKey: string;
+  payload: Record<string, any>;
+  attempts: number;
+  maxAttempts: number;
+  lastError?: string | null;
+  suppressionReason?: string | null;
+  claimedAt?: string | null;
+  claimedBy?: string | null;
+  sentAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  template?: NotificationTemplate;
+  attemptLogs?: NotificationAttempt[];
+  eventLogs?: NotificationEvent[];
+}
+
+export interface NotificationAttempt {
+  id: string;
+  notificationJobId: string;
+  channel: NotificationChannel | string;
+  provider: string;
+  providerMessageId?: string | null;
+  attemptNumber: number;
+  status: NotificationAttemptStatus | string;
+  responseMetadata?: Record<string, any> | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  attemptedAt: string;
+  completedAt?: string | null;
+}
+
+export interface NotificationEvent {
+  id: string;
+  notificationJobId: string;
+  eventType: string;
+  providerEventId?: string | null;
+  eventPayload?: Record<string, any> | null;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface InAppNotification {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  recipientUserId: string;
+  title: string;
+  message: string;
+  category: InAppCategory | string;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+  recipientUser?: UserProfile;
+}
+
+export interface NotificationAnalytics {
+  totalJobs: number;
+  sentCount: number;
+  deliveredCount: number;
+  readCount: number;
+  failedCount: number;
+  suppressedCount: number;
+  pendingCount: number;
+  deliverySuccessRate: number;
+  averageAttempts: number;
+  channelBreakdown: Record<string, number>;
+  statusBreakdown: Record<string, number>;
+  eventTypeBreakdown: Record<string, number>;
+}
+
 
 
 

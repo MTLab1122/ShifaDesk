@@ -32,6 +32,12 @@ import {
   AiToolExecutionLog,
   AiAssistantHealth,
   AiUsageStats,
+  NotificationPreference,
+  NotificationRule,
+  NotificationTemplate,
+  NotificationJob,
+  InAppNotification,
+  NotificationAnalytics,
 } from '@matabai/shared';
 import {
   CreateWhatsappIntegrationInput,
@@ -41,6 +47,14 @@ import {
   UpdateAiAssistantSettingsInput,
   CreateClinicFaqInput,
   UpdateClinicFaqInput,
+  SaveNotificationPreferenceDto,
+  OptOutNotificationPreferenceDto,
+  CreateNotificationRuleDto,
+  UpdateNotificationRuleDto,
+  CreateNotificationTemplateDto,
+  UpdateNotificationTemplateDto,
+  PreviewNotificationTemplateDto,
+  QueryNotificationJobsDto,
 } from '@matabai/validation';
 
 const API_BASE_URL =
@@ -882,5 +896,149 @@ export class ApiClient {
           body: JSON.stringify({ message, clinicId }),
         },
       ),
+  };
+
+  // Phase 8 Notification Orchestration & Workflow Engine
+  static notifications = {
+    list: (params?: Partial<QueryNotificationJobsDto>) => {
+      const query = new URLSearchParams();
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.channel) query.set('channel', params.channel);
+      if (params?.eventType) query.set('eventType', params.eventType);
+      if (params?.status) query.set('status', params.status);
+      if (params?.recipientId) query.set('recipientId', params.recipientId);
+      if (params?.relatedEntityType) query.set('relatedEntityType', params.relatedEntityType);
+      if (params?.relatedEntityId) query.set('relatedEntityId', params.relatedEntityId);
+      if (params?.startDate) query.set('startDate', params.startDate);
+      if (params?.endDate) query.set('endDate', params.endDate);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<NotificationJob>>(`/notifications?${query.toString()}`);
+    },
+
+    getById: (id: string) =>
+      ApiClient.request<NotificationJob>(`/notifications/${id}`),
+
+    getAnalytics: (clinicId?: string) => {
+      const url = clinicId ? `/notifications/analytics?clinicId=${clinicId}` : '/notifications/analytics';
+      return ApiClient.request<NotificationAnalytics>(url);
+    },
+
+    retry: (id: string, force: boolean = false) =>
+      ApiClient.request<NotificationJob>(`/notifications/${id}/retry`, {
+        method: 'POST',
+        body: JSON.stringify({ force }),
+      }),
+
+    cancel: (id: string, reason?: string) =>
+      ApiClient.request<NotificationJob>(`/notifications/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+  };
+
+  static notificationRules = {
+    list: (clinicId?: string) => {
+      const url = clinicId ? `/notification-rules?clinicId=${clinicId}` : '/notification-rules';
+      return ApiClient.request<NotificationRule[]>(url);
+    },
+
+    getById: (id: string) =>
+      ApiClient.request<NotificationRule>(`/notification-rules/${id}`),
+
+    create: (data: CreateNotificationRuleDto) =>
+      ApiClient.request<NotificationRule>('/notification-rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: UpdateNotificationRuleDto) =>
+      ApiClient.request<NotificationRule>(`/notification-rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      ApiClient.request<void>(`/notification-rules/${id}`, {
+        method: 'DELETE',
+      }),
+  };
+
+  static notificationTemplates = {
+    list: (clinicId?: string) => {
+      const url = clinicId ? `/notification-templates?clinicId=${clinicId}` : '/notification-templates';
+      return ApiClient.request<NotificationTemplate[]>(url);
+    },
+
+    getById: (id: string) =>
+      ApiClient.request<NotificationTemplate>(`/notification-templates/${id}`),
+
+    create: (data: CreateNotificationTemplateDto) =>
+      ApiClient.request<NotificationTemplate>('/notification-templates', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (id: string, data: UpdateNotificationTemplateDto) =>
+      ApiClient.request<NotificationTemplate>(`/notification-templates/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      ApiClient.request<void>(`/notification-templates/${id}`, {
+        method: 'DELETE',
+      }),
+
+    preview: (data: PreviewNotificationTemplateDto) =>
+      ApiClient.request<{ body: string; subject?: string }>('/notification-templates/preview', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  };
+
+  static notificationPreferences = {
+    get: (params?: { patientId?: string; userId?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.patientId) query.set('patientId', params.patientId);
+      if (params?.userId) query.set('userId', params.userId);
+      return ApiClient.request<NotificationPreference[]>(`/notification-preferences?${query.toString()}`);
+    },
+
+    save: (data: SaveNotificationPreferenceDto) =>
+      ApiClient.request<NotificationPreference>('/notification-preferences', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    optOut: (data: OptOutNotificationPreferenceDto) =>
+      ApiClient.request<NotificationPreference>('/notification-preferences/opt-out', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  };
+
+  static inApp = {
+    list: (params?: { page?: number; limit?: number; unreadOnly?: boolean; category?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.unreadOnly !== undefined) query.set('unreadOnly', String(params.unreadOnly));
+      if (params?.category) query.set('category', params.category);
+      return ApiClient.request<PaginatedResult<InAppNotification>>(`/in-app-notifications?${query.toString()}`);
+    },
+
+    getUnreadCount: () =>
+      ApiClient.request<{ unreadCount: number }>('/in-app-notifications/unread-count'),
+
+    markAsRead: (id: string) =>
+      ApiClient.request<void>(`/in-app-notifications/${id}/read`, {
+        method: 'POST',
+      }),
+
+    markAllAsRead: () =>
+      ApiClient.request<{ updatedCount: number }>('/in-app-notifications/read-all', {
+        method: 'POST',
+      }),
   };
 }

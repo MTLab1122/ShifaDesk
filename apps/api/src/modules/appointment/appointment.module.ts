@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { DatabaseModule } from '../../common/database/database.module';
 import { AuditModule } from '../audit/audit.module';
+import { NotificationModule } from '../notification/notification.module';
 
 import { WorkingHoursService } from './working-hours.service';
 import { WorkingHoursController } from './working-hours.controller';
@@ -12,7 +13,7 @@ import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
 
 @Module({
-  imports: [DatabaseModule, AuditModule],
+  imports: [DatabaseModule, AuditModule, forwardRef(() => NotificationModule)],
   controllers: [
     WorkingHoursController,
     ScheduleExceptionsController,

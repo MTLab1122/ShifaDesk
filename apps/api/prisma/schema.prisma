@@ -52,6 +52,11 @@ model Organization {
   aiInteractionLogs         AiInteractionLog[]
   clinicFaqs                ClinicFaq[]
   aiToolExecutionLogs       AiToolExecutionLog[]
+  notificationPreferences   NotificationPreference[]
+  notificationRules         NotificationRule[]
+  notificationTemplates     NotificationTemplate[]
+  notificationJobs          NotificationJob[]
+  inAppNotifications        InAppNotification[]
 
   @@index([slug])
   @@index([status])
@@ -97,6 +102,11 @@ model Clinic {
   aiInteractionLogs          AiInteractionLog[]
   clinicFaqs                 ClinicFaq[]
   aiToolExecutionLogs        AiToolExecutionLog[]
+  notificationPreferences    NotificationPreference[]
+  notificationRules          NotificationRule[]
+  notificationTemplates      NotificationTemplate[]
+  notificationJobs           NotificationJob[]
+  inAppNotifications         InAppNotification[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -123,6 +133,8 @@ model UserProfile {
   staffMembers            StaffMember[]
   patients                Patient[]
   assignedWhatsappConversations WhatsappConversation[]
+  notificationPreferences NotificationPreference[]
+  inAppNotifications      InAppNotification[]
 
   @@index([authUserId])
   @@index([email])
@@ -302,6 +314,7 @@ model Patient {
   appointments Appointment[]
   queueTokens  QueueToken[]
   whatsappContacts WhatsappContact[]
+  notificationPreferences NotificationPreference[]
 
   @@unique([organizationId, patientNumber])
   @@index([organizationId])
@@ -877,4 +890,205 @@ model AiToolExecutionLog {
   @@index([toolName])
   @@index([createdAt])
   @@map("ai_tool_execution_logs")
+}
+
+/// Patient and staff communication preferences and consent status
+model NotificationPreference {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  clinicId         String?   @map("clinic_id")
+  patientId        String?   @map("patient_id")
+  userId           String?   @map("user_id")
+  channel          String    // WHATSAPP, IN_APP, EMAIL, SMS
+  enabled          Boolean   @default(true)
+  consentStatus    String    @default("OPTED_IN") @map("consent_status") // OPTED_IN, OPTED_OUT, UNKNOWN
+  consentSource    String    @default("ADMIN") @map("consent_source") // WHATSAPP_KEYWORD, PATIENT_PORTAL, RECEPTIONIST_VERBAL, ADMIN
+  consentTimestamp DateTime  @default(now()) @map("consent_timestamp")
+  optedOutAt       DateTime? @map("opted_out_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient      Patient?     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user         UserProfile? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, patientId, channel])
+  @@unique([organizationId, userId, channel])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([userId])
+  @@index([channel])
+  @@index([consentStatus])
+  @@map("notification_preferences")
+}
+
+/// Configurable notification rules for appointment, queue, and staff operational events
+model NotificationRule {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  clinicId              String   @map("clinic_id")
+  eventType             String   @map("event_type") // APPOINTMENT_BOOKED, APPOINTMENT_CONFIRMED, APPOINTMENT_REMINDER, etc.
+  channel               String   // WHATSAPP, IN_APP, EMAIL, SMS
+  templateId            String?  @map("template_id")
+  enabled               Boolean  @default(true)
+  scheduleOffsetMinutes Int      @default(0) @map("schedule_offset_minutes") // -1440 = 24h before, -120 = 2h before, 0 = immediate
+  priority              String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  quietHoursPolicy      String   @default("ALLOW_IMMEDIATE") @map("quiet_hours_policy") // ALLOW_IMMEDIATE, QUEUE_UNTIL_MORNING, SUPPRESS
+  fallbackPolicy        String   @default("NONE") @map("fallback_policy") // NONE, IN_APP, SMS, EMAIL
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  template     NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([eventType])
+  @@index([channel])
+  @@index([enabled])
+  @@map("notification_rules")
+}
+
+/// Channel-specific multilingual reusable notification templates
+model NotificationTemplate {
+  id                   String   @id @default(uuid())
+  organizationId       String   @map("organization_id")
+  clinicId             String?  @map("clinic_id")
+  name                 String
+  eventType            String   @map("event_type")
+  channel              String   // WHATSAPP, IN_APP, EMAIL, SMS
+  language             String   @default("EN") // EN, UR, PS
+  subject              String?
+  messageBody          String   @map("message_body")
+  providerTemplateName String?  @map("provider_template_name")
+  approvalStatus       String   @default("APPROVED") @map("approval_status") // APPROVED, PENDING, REJECTED, NOT_REQUIRED
+  variablesSchema      String[] @default([]) @map("variables_schema")
+  enabled              Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  rules        NotificationRule[]
+  jobs         NotificationJob[]
+
+  @@unique([organizationId, name, language, channel])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([eventType])
+  @@index([channel])
+  @@index([language])
+  @@map("notification_templates")
+}
+
+/// Scheduled, pending, and dispatched notification jobs
+model NotificationJob {
+  id                String    @id @default(uuid())
+  organizationId    String    @map("organization_id")
+  clinicId          String    @map("clinic_id")
+  recipientId       String    @map("recipient_id") // Patient ID, User ID, or E.164 phone
+  recipientType     String    @default("PATIENT") @map("recipient_type") // PATIENT, STAFF, CONTACT
+  eventType         String    @map("event_type")
+  channel           String    // WHATSAPP, IN_APP, EMAIL, SMS
+  templateId        String?   @map("template_id")
+  relatedEntityType String?   @map("related_entity_type") // APPOINTMENT, QUEUE_TOKEN, QUEUE_SESSION, CONVERSATION
+  relatedEntityId   String?   @map("related_entity_id")
+  scheduledAt       DateTime  @default(now()) @map("scheduled_at")
+  status            String    @default("PENDING") // PENDING, SCHEDULED, PROCESSING, SENT, DELIVERED, READ, FAILED, RETRYING, DEAD_LETTER, CANCELLED, SUPPRESSED
+  idempotencyKey    String    @unique @map("idempotency_key")
+  payload           Json      @default("{}")
+  attempts          Int       @default(0)
+  maxAttempts       Int       @default(3) @map("max_attempts")
+  lastError         String?   @map("last_error")
+  suppressionReason String?   @map("suppression_reason")
+  claimedAt         DateTime? @map("claimed_at")
+  claimedBy         String?   @map("claimed_by") // Worker instance id
+  sentAt            DateTime? @map("sent_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  template     NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  attemptLogs  NotificationAttempt[]
+  eventLogs    NotificationEvent[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([eventType])
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("notification_jobs")
+}
+
+/// Audit ledger of individual delivery attempts for a notification job
+model NotificationAttempt {
+  id                String    @id @default(uuid())
+  notificationJobId String    @map("notification_job_id")
+  channel           String    // WHATSAPP, IN_APP, EMAIL, SMS
+  provider          String    // meta_cloud_api, in_app, mock_smtp, mock_sms
+  providerMessageId String?   @map("provider_message_id")
+  attemptNumber     Int       @map("attempt_number")
+  status            String    // SUCCESS, TEMPORARY_FAILURE, PERMANENT_FAILURE
+  responseMetadata  Json?     @map("response_metadata")
+  errorCode         String?   @map("error_code")
+  errorMessage      String?   @map("error_message")
+  attemptedAt       DateTime  @default(now()) @map("attempted_at")
+  completedAt       DateTime? @map("completed_at")
+
+  job NotificationJob @relation(fields: [notificationJobId], references: [id], onDelete: Cascade)
+
+  @@index([notificationJobId])
+  @@index([status])
+  @@index([attemptedAt])
+  @@map("notification_attempts")
+}
+
+/// Granular delivery and lifecycle events for notification job observability
+model NotificationEvent {
+  id                String   @id @default(uuid())
+  notificationJobId String   @map("notification_job_id")
+  eventType         String   @map("event_type") // QUEUED, CLAIMED, DISPATCHED, DELIVERED, READ, FAILED, RETRY_SCHEDULED, DEAD_LETTERED, CANCELLED, SUPPRESSED
+  providerEventId   String?  @map("provider_event_id")
+  eventPayload      Json?    @map("event_payload")
+  occurredAt        DateTime @default(now()) @map("occurred_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  job NotificationJob @relation(fields: [notificationJobId], references: [id], onDelete: Cascade)
+
+  @@index([notificationJobId])
+  @@index([eventType])
+  @@index([occurredAt])
+  @@map("notification_events")
+}
+
+/// Persistent in-app notifications for authenticated dashboard staff and administrators
+model InAppNotification {
+  id                String    @id @default(uuid())
+  organizationId    String    @map("organization_id")
+  clinicId          String?   @map("clinic_id")
+  recipientUserId   String    @map("recipient_user_id")
+  title             String
+  message           String
+  category          String    @default("OPERATIONAL") // OPERATIONAL, APPOINTMENT, QUEUE, SECURITY, SYSTEM
+  relatedEntityType String?   @map("related_entity_type")
+  relatedEntityId   String?   @map("related_entity_id")
+  readAt            DateTime? @map("read_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic        Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  recipientUser UserProfile  @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([recipientUserId])
+  @@index([readAt])
+  @@index([createdAt])
+  @@map("in_app_notifications")
 }

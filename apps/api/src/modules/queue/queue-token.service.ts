@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
   ConflictException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -17,12 +18,14 @@ import {
   TokenPriorityType,
   VALID_QUEUE_TOKEN_TRANSITIONS,
   AppointmentStatus,
+  NotificationEventType,
 } from '@matabai/shared';
 import {
   AppointmentCheckInInput,
   WalkInCheckInInput,
   QueryQueueTokensInput,
 } from '@matabai/validation';
+import { NotificationSchedulerService } from '../notification/notification-scheduler.service';
 
 @Injectable()
 export class QueueTokenService {
@@ -31,6 +34,7 @@ export class QueueTokenService {
     private readonly audit: AuditService,
     private readonly realtime: QueueRealtimeService,
     private readonly sessionService: QueueSessionService,
+    @Optional() private readonly notificationScheduler?: NotificationSchedulerService,
   ) {}
 
   /**
@@ -327,6 +331,15 @@ export class QueueTokenService {
         },
       });
 
+      if (this.notificationScheduler) {
+        this.notificationScheduler
+          .scheduleQueueNotifications(token.id, NotificationEventType.TOKEN_GENERATED, {
+            estimatedWaitTime: token.estimatedWaitMinutes || 15,
+            patientsAhead: Math.max(0, token.queuePosition - 1),
+          })
+          .catch(() => {});
+      }
+
       return token;
     });
   }
@@ -573,6 +586,12 @@ export class QueueTokenService {
         resourceId: nextToken.id,
         metadata: { tokenDisplay: nextToken.tokenDisplay },
       });
+
+      if (this.notificationScheduler) {
+        this.notificationScheduler
+          .scheduleQueueNotifications(nextToken.id, NotificationEventType.TOKEN_CALLED, { roomNumber: '1' })
+          .catch(() => {});
+      }
 
       return updated;
     });

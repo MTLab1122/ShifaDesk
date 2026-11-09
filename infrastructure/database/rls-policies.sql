@@ -718,6 +718,171 @@ CREATE POLICY "ai_tools_select" ON ai_tool_execution_logs
     )
   );
 
+-- ==============================================================================
+-- 11. Phase 8: Notification Orchestration & Workflow Engine RLS Policies
+-- ==============================================================================
+
+ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE in_app_notifications ENABLE ROW LEVEL SECURITY;
+
+-- Notification Preferences
+CREATE POLICY "notification_preferences_select" ON notification_preferences
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_preferences.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+    OR EXISTS (
+      SELECT 1 FROM user_profiles up
+      WHERE up.id = notification_preferences.user_id
+        AND up.auth_user_id = auth.uid()
+    )
+    OR EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = notification_preferences.patient_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "notification_preferences_write" ON notification_preferences
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_preferences.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Notification Rules
+CREATE POLICY "notification_rules_select" ON notification_rules
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_rules.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "notification_rules_write" ON notification_rules
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_rules.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Notification Templates
+CREATE POLICY "notification_templates_select" ON notification_templates
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_templates.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "notification_templates_write" ON notification_templates
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_templates.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Notification Jobs
+CREATE POLICY "notification_jobs_select" ON notification_jobs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_jobs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "notification_jobs_write" ON notification_jobs
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = notification_jobs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- In-App Notifications
+CREATE POLICY "in_app_notifications_select" ON in_app_notifications
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles up
+      WHERE up.id = in_app_notifications.recipient_user_id
+        AND up.auth_user_id = auth.uid()
+    )
+    OR EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = in_app_notifications.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "in_app_notifications_write" ON in_app_notifications
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles up
+      WHERE up.id = in_app_notifications.recipient_user_id
+        AND up.auth_user_id = auth.uid()
+    )
+    OR EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = in_app_notifications.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
 
 
 

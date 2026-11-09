@@ -93,8 +93,12 @@ describe('AiToolsService - 11 Allowlisted Server Tools', () => {
         startTime: '11:00',
       }),
       cancel: jest.fn().mockResolvedValue({
-        id: 'apt-1',
-        status: 'CANCELLED',
+        success: true,
+        message: 'Appointment cancelled successfully. Slot has been released.',
+        appointment: {
+          id: 'apt-1',
+          status: 'CANCELLED',
+        },
       }),
     };
 
@@ -117,13 +121,13 @@ describe('AiToolsService - 11 Allowlisted Server Tools', () => {
   it('Tool 2: searchDoctors should filter doctors and log execution', async () => {
     const docs = await toolsService.searchDoctors('conv-1', 'clinic-1', 'Cardiology');
     expect(docs).toHaveLength(1);
-    expect(docs[0].fullName).toBe('Dr. Sarah Khan');
+    expect(docs[0]!.fullName).toBe('Dr. Sarah Khan');
   });
 
   it('Tool 3: getDoctorAvailability should return available slots', async () => {
     const avail = await toolsService.getDoctorAvailability('conv-1', 'clinic-1', 'doc-1', '2026-11-15');
     expect(avail.totalAvailable).toBe(1);
-    expect(avail.slots[0].startTime).toBe('10:00');
+    expect(avail.slots[0]!.startTime).toBe('10:00');
   });
 
   it('Tool 4: createAppointment should book slot and log execution', async () => {
@@ -151,7 +155,7 @@ describe('AiToolsService - 11 Allowlisted Server Tools', () => {
 
   it('Tool 7: cancelAppointment should cancel appointment', async () => {
     const res = await toolsService.cancelAppointment('conv-1', 'apt-1', 'Patient request');
-    expect(res.status).toBe('CANCELLED');
+    expect(res.appointment.status).toBe('CANCELLED');
   });
 
   it('Tool 8: getPatientToken should return active token for patient', async () => {

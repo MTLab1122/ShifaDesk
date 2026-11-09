@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -13,6 +14,7 @@ import {
   UserRole,
   AppointmentStatus,
   VALID_APPOINTMENT_TRANSITIONS,
+  NotificationEventType,
 } from '@matabai/shared';
 import {
   CreateAppointmentDto,
@@ -21,6 +23,7 @@ import {
   UpdateAppointmentStatusDto,
   QueryAppointmentsDto,
 } from '@matabai/validation';
+import { NotificationSchedulerService } from '../notification/notification-scheduler.service';
 
 @Injectable()
 export class AppointmentService {
@@ -28,6 +31,7 @@ export class AppointmentService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly slotGen: SlotGenerationService,
+    @Optional() private readonly notificationScheduler?: NotificationSchedulerService,
   ) {}
 
   async findAll(user: AuthenticatedUser, query: QueryAppointmentsDto) {
@@ -305,6 +309,13 @@ export class AppointmentService {
       },
     });
 
+    // Schedule notification workflows
+    if (this.notificationScheduler) {
+      this.notificationScheduler
+        .scheduleAppointmentNotifications(appointment.id, NotificationEventType.APPOINTMENT_CONFIRMED)
+        .catch(() => {});
+    }
+
     return appointment;
   }
 
@@ -418,6 +429,13 @@ export class AppointmentService {
       },
     });
 
+    // Invalidate prior reminders & schedule updated notifications
+    if (this.notificationScheduler) {
+      this.notificationScheduler
+        .scheduleAppointmentNotifications(updated.id, NotificationEventType.APPOINTMENT_RESCHEDULED)
+        .catch(() => {});
+    }
+
     return updated;
   }
 
@@ -486,6 +504,13 @@ export class AppointmentService {
         reason: dto.reason,
       },
     });
+
+    // Invalidate reminders & dispatch cancellation notice
+    if (this.notificationScheduler) {
+      this.notificationScheduler
+        .scheduleAppointmentNotifications(cancelled.id, NotificationEventType.APPOINTMENT_CANCELLED)
+        .catch(() => {});
+    }
 
     return {
       success: true,
