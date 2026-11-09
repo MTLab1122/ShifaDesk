@@ -28,6 +28,6 @@
       "@matabai/validation/*": ["../../packages/validation/dist/*"]
     }
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

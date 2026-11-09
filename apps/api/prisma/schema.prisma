@@ -9,7 +9,6 @@ generator client {
 }
 
 /// Foundational system connectivity check table
-/// Used for verifying database connectivity, connection pooling, and migrations
 model SystemHealthCheck {
   id        String   @id @default(uuid())
   checkKey  String   @unique @map("check_key")
@@ -17,4 +16,132 @@ model SystemHealthCheck {
   checkedAt DateTime @default(now()) @updatedAt @map("checked_at")
 
   @@map("system_health_checks")
+}
+
+/// Organization entity representing multi-tenant healthcare boundary
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  clinics     Clinic[]
+  memberships OrganizationMembership[]
+  auditLogs   AuditLog[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("organizations")
+}
+
+/// Physical or branch clinic facility under an organization
+model Clinic {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  slug           String
+  address        String?
+  phone          String?
+  email          String?
+  timezone       String   @default("Asia/Karachi")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships  ClinicMembership[]
+  auditLogs    AuditLog[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([status])
+  @@map("clinics")
+}
+
+/// Application user profile linked to Supabase Auth identity
+model UserProfile {
+  id         String   @id @default(uuid())
+  authUserId String   @unique @map("auth_user_id")
+  fullName   String   @map("full_name")
+  email      String   @unique
+  phone      String?
+  avatarUrl  String?  @map("avatar_url")
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  organizationMemberships OrganizationMembership[]
+  clinicMemberships       ClinicMembership[]
+  auditLogs               AuditLog[]
+
+  @@index([authUserId])
+  @@index([email])
+  @@map("user_profiles")
+}
+
+/// Organization membership linking a user profile with organization-level role
+model OrganizationMembership {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userProfileId  String   @map("user_profile_id")
+  role           String
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userProfile  UserProfile  @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userProfileId])
+  @@index([organizationId])
+  @@index([userProfileId])
+  @@index([role])
+  @@map("organization_memberships")
+}
+
+/// Clinic membership linking a user profile with a specific clinic branch role
+model ClinicMembership {
+  id            String   @id @default(uuid())
+  clinicId      String   @map("clinic_id")
+  userProfileId String   @map("user_profile_id")
+  role          String
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  clinic      Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, userProfileId])
+  @@index([clinicId])
+  @@index([userProfileId])
+  @@index([role])
+  @@map("clinic_memberships")
+}
+
+/// Immutable audit log for tracking administrative and clinical operations
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?  @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  actorUserId    String?  @map("actor_user_id")
+  action         String
+  resourceType   String   @map("resource_type")
+  resourceId     String?  @map("resource_id")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  clinic       Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  actorUser    UserProfile?  @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([actorUserId])
+  @@index([action])
+  @@index([resourceType])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -4,10 +4,15 @@ import { validateEnvironment } from './common/config/env.config';
 import { DatabaseModule } from './common/database/database.module';
 import { HealthModule } from './modules/health/health.module';
 
-// Architectural Module Boundaries
+// Phase 2 Functional Modules
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { ClinicModule } from './modules/clinic/clinic.module';
+import { UserModule } from './modules/user/user.module';
+import { MembershipModule } from './modules/membership/membership.module';
+import { AuditModule } from './modules/audit/audit.module';
+
+// Future Phase Architectural Placeholders
 import { DoctorModule } from './modules/doctor/doctor.module';
 import { PatientModule } from './modules/patient/patient.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
@@ -17,7 +22,6 @@ import { AIConversationModule } from './modules/ai-conversation/ai-conversation.
 import { NotificationModule } from './modules/notification/notification.module';
 import { LaboratoryModule } from './modules/laboratory/laboratory.module';
 import { ReportModule } from './modules/report/report.module';
-import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -29,10 +33,15 @@ import { AuditModule } from './modules/audit/audit.module';
     DatabaseModule,
     HealthModule,
 
-    // Architectural modules
+    // Phase 2 Core Modules
     AuthModule,
     TenantModule,
     ClinicModule,
+    UserModule,
+    MembershipModule,
+    AuditModule,
+
+    // Architectural module boundaries
     DoctorModule,
     PatientModule,
     AppointmentModule,
@@ -42,7 +51,6 @@ import { AuditModule } from './modules/audit/audit.module';
     NotificationModule,
     LaboratoryModule,
     ReportModule,
-    AuditModule,
   ],
 })
 export class AppModule {}

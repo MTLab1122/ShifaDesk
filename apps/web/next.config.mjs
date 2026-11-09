@@ -3,6 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@matabai/shared', '@matabai/config', '@matabai/validation'],
   poweredByHeader: false,
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js'],
+      '.jsx': ['.tsx', '.jsx'],
+    };
+    return config;
+  },
   async headers() {
     return [
       {

@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
+import { TenantController } from './tenant.controller';
+import { TenantService } from './tenant.service';
+import { AuditService } from '../../common/audit/audit.service';
 
-/**
- * Architectural Module Placeholder: TenantModule
- * Scope: Multi-tenancy isolation, organization lifecycle, subscription tier enforcement
- */
 @Module({
-  controllers: [],
-  providers: [],
-  exports: [],
+  controllers: [TenantController],
+  providers: [TenantService, AuditService],
+  exports: [TenantService],
 })
 export class TenantModule {}

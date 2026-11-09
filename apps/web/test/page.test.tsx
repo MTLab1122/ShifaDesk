@@ -8,15 +8,21 @@ describe('HomePage', () => {
     expect(screen.getByText(/MatabAI/i)).toBeInTheDocument();
   });
 
-  it('renders the phase 0 operational badge', () => {
+  it('renders the operational badge', () => {
     render(<HomePage />);
-    expect(screen.getByText(/Phase 0 Operational/i)).toBeInTheDocument();
+    expect(screen.getByText(/Phase 1 & Phase 2 Operational/i)).toBeInTheDocument();
   });
 
   it('renders architectural foundation cards', () => {
     render(<HomePage />);
-    expect(screen.getByText('Core Monorepo')).toBeInTheDocument();
-    expect(screen.getByText('Backend Architecture')).toBeInTheDocument();
-    expect(screen.getByText('Security & DB')).toBeInTheDocument();
+    expect(screen.getByText('Multi-Tenant Architecture')).toBeInTheDocument();
+    expect(screen.getByText('Backend & Auth API')).toBeInTheDocument();
+    expect(screen.getByText('Multilingual SaaS UI')).toBeInTheDocument();
+  });
+
+  it('renders portal access buttons', () => {
+    render(<HomePage />);
+    expect(screen.getByText('Launch Staff Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Open Patient Portal')).toBeInTheDocument();
   });
 });

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../common/auth/roles.guard';
 
-/**
- * Architectural Module Placeholder: AuthModule
- * Scope: Authentication, Supabase JWT verification, session management, RBAC
- */
 @Module({
-  controllers: [],
-  providers: [],
-  exports: [],
+  controllers: [AuthController],
+  providers: [AuthService, JwtAuthGuard, RolesGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}
