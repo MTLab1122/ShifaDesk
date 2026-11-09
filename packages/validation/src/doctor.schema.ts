@@ -38,3 +38,4 @@ export const updateDoctorStatusSchema = z.object({
 export type CreateDoctorDto = z.infer<typeof createDoctorSchema>;
 export type UpdateDoctorDto = z.infer<typeof updateDoctorSchema>;
 export type UpdateDoctorStatusDto = z.infer<typeof updateDoctorStatusSchema>;
+

@@ -108,3 +108,4 @@ export class DoctorController {
     return this.doctorService.updateStatus(id, validated.status, user);
   }
 }
+

@@ -229,4 +229,120 @@ CREATE POLICY "patient_reception_write" ON patients
     )
   );
 
+-- ==============================================================================
+-- 8. Phase 4 Tables: Working Hours, Schedule Exceptions, Appointments & History
+-- ==============================================================================
+ALTER TABLE doctor_working_hours ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doctor_schedule_exceptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointment_status_history ENABLE ROW LEVEL SECURITY;
+
+-- Doctor Working Hours: Organization members can view schedules
+CREATE POLICY "working_hours_org_select" ON doctor_working_hours
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = doctor_working_hours.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Doctor Working Hours: Only Admins can modify working hours
+CREATE POLICY "working_hours_admin_write" ON doctor_working_hours
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = doctor_working_hours.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Schedule Exceptions: Organization members can view exceptions
+CREATE POLICY "schedule_exceptions_org_select" ON doctor_schedule_exceptions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = doctor_schedule_exceptions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Schedule Exceptions: Admins can modify exceptions
+CREATE POLICY "schedule_exceptions_admin_write" ON doctor_schedule_exceptions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = doctor_schedule_exceptions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Appointments: Staff can view appointments within organization; Patients can view their own
+CREATE POLICY "appointments_select" ON appointments
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = appointments.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+    OR EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = appointments.patient_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+-- Appointments: Authorized staff (or Patient for own) can insert/update
+CREATE POLICY "appointments_write" ON appointments
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = appointments.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+    OR EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = appointments.patient_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+-- Appointment Status History: Read-only for authorized staff and patient
+CREATE POLICY "appointment_history_select" ON appointment_status_history
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = appointment_status_history.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
 

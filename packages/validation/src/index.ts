@@ -9,3 +9,6 @@ export * from './audit.schema.js';
 export * from './doctor.schema.js';
 export * from './staff.schema.js';
 export * from './patient.schema.js';
+export * from './working-hours.schema.js';
+export * from './schedule-exception.schema.js';
+export * from './appointment.schema.js';

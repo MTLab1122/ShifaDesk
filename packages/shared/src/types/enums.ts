@@ -66,6 +66,28 @@ export enum PatientConsentStatus {
   REVOKED = 'REVOKED',
 }
 
+export enum BookingSource {
+  ADMIN = 'ADMIN',
+  RECEPTIONIST = 'RECEPTIONIST',
+  PATIENT_PORTAL = 'PATIENT_PORTAL',
+  WHATSAPP = 'WHATSAPP',
+  VOICE = 'VOICE',
+}
+
+export enum ScheduleExceptionType {
+  UNAVAILABLE = 'UNAVAILABLE',
+  CUSTOM_HOURS = 'CUSTOM_HOURS',
+}
+
+export const VALID_APPOINTMENT_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  [AppointmentStatus.PENDING]: [AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED],
+  [AppointmentStatus.CONFIRMED]: [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW, AppointmentStatus.IN_PROGRESS],
+  [AppointmentStatus.IN_PROGRESS]: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED],
+  [AppointmentStatus.COMPLETED]: [],
+  [AppointmentStatus.CANCELLED]: [],
+  [AppointmentStatus.NO_SHOW]: [],
+};
+
 export const PERMISSIONS = {
   // Organizations
   ORGANIZATION_READ: 'organization:read',

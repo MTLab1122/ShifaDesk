@@ -107,3 +107,4 @@ export class PatientController {
     return this.patientService.updateStatus(id, validated.status, user);
   }
 }
+

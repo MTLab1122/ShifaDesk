@@ -10,6 +10,10 @@ import {
   Doctor,
   StaffMember,
   Patient,
+  DoctorWorkingHours,
+  DoctorScheduleException,
+  Appointment,
+  AvailableSlot,
   PaginatedResult,
 } from '@matabai/shared';
 
@@ -372,5 +376,148 @@ export class ApiClient {
       if (params?.limit) query.set('limit', String(params.limit));
       return ApiClient.request<PaginatedResult<AuditLog>>(`/audit-logs?${query.toString()}`);
     },
+  };
+
+  // Doctor Working Hours Endpoints
+  static workingHours = {
+    list: (doctorId: string, clinicId?: string) => {
+      const query = new URLSearchParams();
+      if (clinicId) query.set('clinicId', clinicId);
+      return ApiClient.request<DoctorWorkingHours[]>(`/doctors/${doctorId}/working-hours?${query.toString()}`);
+    },
+    create: (doctorId: string, data: {
+      clinicId: string;
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      slotDurationMinutes?: number;
+      breakStartTime?: string | null;
+      breakEndTime?: string | null;
+      isActive?: boolean;
+    }) =>
+      ApiClient.request<DoctorWorkingHours>(`/doctors/${doctorId}/working-hours`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (doctorId: string, id: string, data: Partial<DoctorWorkingHours>) =>
+      ApiClient.request<DoctorWorkingHours>(`/doctors/${doctorId}/working-hours/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (doctorId: string, id: string) =>
+      ApiClient.request<{ success: boolean; message: string }>(`/doctors/${doctorId}/working-hours/${id}`, {
+        method: 'DELETE',
+      }),
+  };
+
+  // Doctor Schedule Exceptions Endpoints
+  static scheduleExceptions = {
+    list: (doctorId: string, clinicId?: string) => {
+      const query = new URLSearchParams();
+      if (clinicId) query.set('clinicId', clinicId);
+      return ApiClient.request<DoctorScheduleException[]>(`/doctors/${doctorId}/schedule-exceptions?${query.toString()}`);
+    },
+    create: (doctorId: string, data: {
+      clinicId: string;
+      exceptionDate: string;
+      exceptionType: string;
+      startTime?: string | null;
+      endTime?: string | null;
+      reason?: string | null;
+    }) =>
+      ApiClient.request<DoctorScheduleException>(`/doctors/${doctorId}/schedule-exceptions`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (doctorId: string, id: string, data: Partial<DoctorScheduleException>) =>
+      ApiClient.request<DoctorScheduleException>(`/doctors/${doctorId}/schedule-exceptions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (doctorId: string, id: string) =>
+      ApiClient.request<{ success: boolean; message: string }>(`/doctors/${doctorId}/schedule-exceptions/${id}`, {
+        method: 'DELETE',
+      }),
+  };
+
+  // Availability Endpoints
+  static availability = {
+    get: (params: { clinicId: string; doctorId: string; date: string }) => {
+      const query = new URLSearchParams();
+      query.set('clinicId', params.clinicId);
+      query.set('doctorId', params.doctorId);
+      query.set('date', params.date);
+      return ApiClient.request<AvailableSlot[]>(`/availability?${query.toString()}`);
+    },
+  };
+
+  // Appointments Endpoints
+  static appointments = {
+    list: (params?: {
+      page?: number;
+      limit?: number;
+      clinicId?: string;
+      doctorId?: string;
+      patientId?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      search?: string;
+      sortBy?: string;
+      sortOrder?: string;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.doctorId) query.set('doctorId', params.doctorId);
+      if (params?.patientId) query.set('patientId', params.patientId);
+      if (params?.status) query.set('status', params.status);
+      if (params?.startDate) query.set('startDate', params.startDate);
+      if (params?.endDate) query.set('endDate', params.endDate);
+      if (params?.search) query.set('search', params.search);
+      if (params?.sortBy) query.set('sortBy', params.sortBy);
+      if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+      return ApiClient.request<PaginatedResult<Appointment>>(`/appointments?${query.toString()}`);
+    },
+    get: (id: string) => ApiClient.request<Appointment>(`/appointments/${id}`),
+    create: (data: {
+      clinicId: string;
+      doctorId: string;
+      patientId: string;
+      appointmentDate: string;
+      startTime: string;
+      endTime: string;
+      bookingSource?: string;
+      reasonForVisit?: string | null;
+      internalNotes?: string | null;
+    }) =>
+      ApiClient.request<Appointment>('/appointments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    reschedule: (id: string, data: {
+      appointmentDate: string;
+      startTime: string;
+      endTime: string;
+      reason?: string | null;
+    }) =>
+      ApiClient.request<Appointment>(`/appointments/${id}/reschedule`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    cancel: (id: string, data: { reason: string }) =>
+      ApiClient.request<{ success: boolean; message: string; appointment: Appointment }>(
+        `/appointments/${id}/cancel`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+      ),
+    updateStatus: (id: string, data: { status: string; reason?: string | null }) =>
+      ApiClient.request<Appointment>(`/appointments/${id}/status`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   };
 }

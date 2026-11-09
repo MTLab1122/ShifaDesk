@@ -30,3 +30,4 @@ export const updateStaffStatusSchema = z.object({
 export type CreateStaffDto = z.infer<typeof createStaffSchema>;
 export type UpdateStaffDto = z.infer<typeof updateStaffSchema>;
 export type UpdateStaffStatusDto = z.infer<typeof updateStaffStatusSchema>;
+

@@ -140,3 +140,87 @@ export interface Patient {
   clinic?: Clinic;
 }
 
+export interface DoctorWorkingHours {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  doctorId: string;
+  dayOfWeek: number; // 0-6
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  slotDurationMinutes: number;
+  breakStartTime?: string | null;
+  breakEndTime?: string | null;
+  effectiveFrom: string;
+  effectiveUntil?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+  doctor?: Doctor;
+}
+
+export interface DoctorScheduleException {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  doctorId: string;
+  exceptionDate: string; // YYYY-MM-DD
+  exceptionType: string; // UNAVAILABLE, CUSTOM_HOURS
+  startTime?: string | null;
+  endTime?: string | null;
+  reason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+  doctor?: Doctor;
+}
+
+export interface Appointment {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  doctorId: string;
+  patientId: string;
+  appointmentNumber: string;
+  appointmentDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  timezone: string;
+  status: string; // PENDING, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW
+  bookingSource: string; // ADMIN, RECEPTIONIST, PATIENT_PORTAL
+  reasonForVisit?: string | null;
+  internalNotes?: string | null;
+  cancellationReason?: string | null;
+  createdBy: string;
+  cancelledBy?: string | null;
+  rescheduledFromId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+  doctor?: Doctor;
+  patient?: Patient;
+  statusHistory?: AppointmentStatusHistory[];
+}
+
+export interface AppointmentStatusHistory {
+  id: string;
+  appointmentId: string;
+  organizationId: string;
+  clinicId: string;
+  previousStatus?: string | null;
+  newStatus: string;
+  changedBy: string;
+  changeReason?: string | null;
+  createdAt: string;
+}
+
+export interface AvailableSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+  isAvailable: boolean;
+}
+
+
