@@ -19,8 +19,10 @@ import { AuthenticatedUser } from '../../common/auth/token-payload.interface';
 import {
   CreateClinicDto,
   UpdateClinicDto,
+  UpdateClinicStatusDto,
   createClinicSchema,
   updateClinicSchema,
+  updateClinicStatusSchema,
 } from '@matabai/validation';
 
 @ApiTags('Clinics')
@@ -39,9 +41,11 @@ export class ClinicController {
     @Query('organizationId') orgQuery?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 20,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
   ) {
     const orgId = orgQuery || orgHeader;
-    return this.clinicService.findAll(user, orgId, Number(page), Number(limit));
+    return this.clinicService.findAll(user, orgId, Number(page), Number(limit), search, status);
   }
 
   @Post()
@@ -78,5 +82,18 @@ export class ClinicController {
   ) {
     const validated = updateClinicSchema.parse(body);
     return this.clinicService.update(id, validated, user);
+  }
+
+  @Patch(':id/status')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CLINIC_ADMIN)
+  @ApiOperation({ summary: 'Update clinic active/inactive status' })
+  @ApiResponse({ status: 200, description: 'Clinic status updated' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateClinicStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const validated = updateClinicStatusSchema.parse(body);
+    return this.clinicService.updateStatus(id, validated.status, user);
   }
 }

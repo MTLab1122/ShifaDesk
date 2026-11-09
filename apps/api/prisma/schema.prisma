@@ -27,9 +27,13 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  clinics     Clinic[]
-  memberships OrganizationMembership[]
-  auditLogs   AuditLog[]
+  clinics           Clinic[]
+  memberships       OrganizationMembership[]
+  auditLogs         AuditLog[]
+  doctors           Doctor[]
+  staffMembers      StaffMember[]
+  patients          Patient[]
+  doctorAssignments DoctorClinicAssignment[]
 
   @@index([slug])
   @@index([status])
@@ -50,9 +54,13 @@ model Clinic {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberships  ClinicMembership[]
-  auditLogs    AuditLog[]
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships       ClinicMembership[]
+  auditLogs         AuditLog[]
+  doctors           Doctor[]
+  staffMembers      StaffMember[]
+  patients          Patient[]
+  doctorAssignments DoctorClinicAssignment[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -75,6 +83,9 @@ model UserProfile {
   organizationMemberships OrganizationMembership[]
   clinicMemberships       ClinicMembership[]
   auditLogs               AuditLog[]
+  doctors                 Doctor[]
+  staffMembers            StaffMember[]
+  patients                Patient[]
 
   @@index([authUserId])
   @@index([email])
@@ -144,4 +155,113 @@ model AuditLog {
   @@index([resourceType])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+/// Doctor medical practitioner entity
+model Doctor {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  clinicId           String   @map("clinic_id")
+  userProfileId      String?  @map("user_profile_id")
+  fullName           String   @map("full_name")
+  email              String?
+  phone              String
+  specialty          String
+  qualification      String
+  registrationNumber String   @map("registration_number")
+  consultationFee    Float    @default(0) @map("consultation_fee")
+  biography          String?
+  profileImageUrl    String?  @map("profile_image_url")
+  status             String   @default("ACTIVE")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic            Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  userProfile       UserProfile?             @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+  clinicAssignments DoctorClinicAssignment[]
+
+  @@unique([clinicId, registrationNumber])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([specialty])
+  @@index([status])
+  @@map("doctors")
+}
+
+/// Cross-clinic assignment for doctors operating across multiple branches in an organization
+model DoctorClinicAssignment {
+  id             String   @id @default(uuid())
+  doctorId       String   @map("doctor_id")
+  clinicId       String   @map("clinic_id")
+  organizationId String   @map("organization_id")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  doctor       Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, clinicId])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@map("doctor_clinic_assignments")
+}
+
+/// Operational staff members (Receptionists, Laboratory technicians, Nurses, Administrative)
+model StaffMember {
+  id               String   @id @default(uuid())
+  organizationId   String   @map("organization_id")
+  clinicId         String   @map("clinic_id")
+  userProfileId    String?  @map("user_profile_id")
+  fullName         String   @map("full_name")
+  email            String
+  phone            String
+  designation      String
+  department       String
+  employmentStatus String   @default("ACTIVE") @map("employment_status")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  userProfile  UserProfile? @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([designation])
+  @@index([employmentStatus])
+  @@map("staff_members")
+}
+
+/// Outpatient registry entity representing clinic patients
+model Patient {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  clinicId              String   @map("clinic_id")
+  userProfileId         String?  @map("user_profile_id")
+  patientNumber         String   @map("patient_number")
+  fullName              String   @map("full_name")
+  dateOfBirth           String?  @map("date_of_birth")
+  gender                String?
+  phone                 String
+  email                 String?
+  address               String?
+  emergencyContactName  String?  @map("emergency_contact_name")
+  emergencyContactPhone String?  @map("emergency_contact_phone")
+  consentStatus         String   @default("GRANTED") @map("consent_status")
+  status                String   @default("ACTIVE")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  userProfile  UserProfile? @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, patientNumber])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([phone])
+  @@index([status])
+  @@map("patients")
 }

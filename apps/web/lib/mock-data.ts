@@ -299,3 +299,4 @@ export const MOCK_NOTIFICATIONS: MockNotification[] = [
   { id: 'notif-2', title: 'Token Called', message: 'Token #101 called to Consultation Room 1.', category: 'queue', read: false, timestamp: '25 mins ago' },
   { id: 'notif-3', title: 'Lab Result Ready', message: 'CBC report for Usman Ali is now ready for doctor review.', category: 'system', read: true, timestamp: '1 hour ago' },
 ];
+

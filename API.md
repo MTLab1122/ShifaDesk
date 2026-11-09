@@ -2,7 +2,7 @@
 
 Founder: **Muhammad Talha**  
 Project: **MatabAI (ShifaDesk)**  
-Status: **Phase 2 Complete — Real Database & Auth Endpoints Active**
+Status: **Phase 3 Complete — Clinic, Doctor, Staff & Patient Management Active**
 
 ---
 
@@ -36,68 +36,95 @@ Content-Type: application/json
 
 ---
 
-## 3. Implemented Phase 2 Endpoints
+## 3. Complete Phase 3 REST Endpoints
 
-| Category | Method | Endpoint | Allowed Roles | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **System** | `GET` | `/api/v1/health` | Public | System status, database latency & uptime |
-| **Auth** | `GET` | `/api/v1/auth/me` | Authenticated | Retrieve authenticated user profile & tenant memberships |
-| **Auth** | `POST` | `/api/v1/auth/validate-session` | Authenticated | Validate current JWT session token validity |
-| **Auth** | `POST` | `/api/v1/auth/logout` | Authenticated | Terminate session & log audit trail |
-| **Organizations** | `GET` | `/api/v1/organizations` | All Authenticated | List organizations accessible by current user |
-| **Organizations** | `POST` | `/api/v1/organizations` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Register new organization / practice network |
-| **Organizations** | `GET` | `/api/v1/organizations/:id` | Member or `SUPER_ADMIN` | Get organization details (tenant-isolated) |
-| **Organizations** | `PATCH` | `/api/v1/organizations/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update organization details |
-| **Clinics** | `GET` | `/api/v1/clinics` | Member or `SUPER_ADMIN` | List clinics (filter by `organizationId`) |
-| **Clinics** | `POST` | `/api/v1/clinics` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Create new clinic facility / branch |
-| **Clinics** | `GET` | `/api/v1/clinics/:id` | Member or `SUPER_ADMIN` | Get clinic facility details |
-| **Clinics** | `PATCH` | `/api/v1/clinics/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update clinic information |
-| **Users** | `GET` | `/api/v1/users/me` | Authenticated | Get currently signed-in user profile |
-| **Users** | `PATCH` | `/api/v1/users/me` | Authenticated | Update user name, phone, or avatar |
-| **Memberships** | `GET` | `/api/v1/memberships` | `SUPER_ADMIN`, `CLINIC_ADMIN` | List organization and clinic memberships |
-| **Memberships** | `POST` | `/api/v1/memberships` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Invite/assign staff member to organization |
-| **Memberships** | `PATCH` | `/api/v1/memberships/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update member role or status |
-| **Memberships** | `DELETE` | `/api/v1/memberships/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Revoke staff membership |
-| **Audit Logs** | `GET` | `/api/v1/audit-logs` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Query immutable audit log events |
+### A. Health & Auth
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/health` | Public | System status, database latency & uptime |
+| `GET` | `/api/v1/auth/me` | Authenticated | Retrieve authenticated user profile & tenant memberships |
+| `POST` | `/api/v1/auth/validate-session` | Authenticated | Validate current JWT session token validity |
+| `POST` | `/api/v1/auth/logout` | Authenticated | Terminate session & log audit trail |
+
+### B. Organizations & Clinics
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/organizations` | All Authenticated | List organizations accessible by current user |
+| `POST` | `/api/v1/organizations` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Register new organization / practice network |
+| `GET` | `/api/v1/organizations/:id` | Member or `SUPER_ADMIN` | Get organization details (tenant-isolated) |
+| `PATCH` | `/api/v1/organizations/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update organization details |
+| `GET` | `/api/v1/clinics` | Member or `SUPER_ADMIN` | Search & list clinics (page, limit, status, search) |
+| `POST` | `/api/v1/clinics` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Create new clinic facility / branch |
+| `GET` | `/api/v1/clinics/:id` | Member or `SUPER_ADMIN` | Get clinic facility details |
+| `PATCH` | `/api/v1/clinics/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update clinic information |
+| `PATCH` | `/api/v1/clinics/:id/status` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Toggle clinic status (`ACTIVE` <-> `INACTIVE`) |
+
+### C. Doctors
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/doctors` | All Tenant Staff | List doctors with filtering (`clinicId`, `status`, `specialty`, `search`, pagination) |
+| `POST` | `/api/v1/doctors` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Create doctor profile with clinic assignment and fees |
+| `GET` | `/api/v1/doctors/:id` | All Tenant Staff | Get doctor details (Registration No. masked to `***RESTRICTED***` for non-admins) |
+| `PATCH` | `/api/v1/doctors/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update doctor specialty, qualification, fee, or bio |
+| `PATCH` | `/api/v1/doctors/:id/status` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Toggle doctor roster status (`ACTIVE` <-> `INACTIVE`) |
+
+### D. Staff Members
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/staff` | All Tenant Staff | List staff members (`clinicId`, `designation`, `status`, `search`, pagination) |
+| `POST` | `/api/v1/staff` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Register receptionist, laboratory staff, or clinical support |
+| `GET` | `/api/v1/staff/:id` | All Tenant Staff | Get staff member profile |
+| `PATCH` | `/api/v1/staff/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update staff designation, department, contact |
+| `PATCH` | `/api/v1/staff/:id/status` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Toggle employment status (`ACTIVE` <-> `INACTIVE`) |
+
+### E. Patients
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/patients` | `SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST` | Search & list patients (search by name, MRN, phone; filter by clinic/status) |
+| `POST` | `/api/v1/patients` | `SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST` | Register outpatient (auto-generates `MRN-YYYY-XXXX`, checks duplicate) |
+| `GET` | `/api/v1/patients/:id` | Authorized Staff / Patient Self | Get patient chart & demographic details (strictly tenant-isolated) |
+| `PATCH` | `/api/v1/patients/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST` | Update demographics, emergency contacts, consent |
+| `PATCH` | `/api/v1/patients/:id/status` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Soft delete or toggle patient status (`ACTIVE` <-> `INACTIVE`) |
+
+### F. Users, Memberships & Audit Logs
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/users/me` | Authenticated | Get currently signed-in user profile |
+| `PATCH` | `/api/v1/users/me` | Authenticated | Update user name, phone, or avatar |
+| `GET` | `/api/v1/memberships` | `SUPER_ADMIN`, `CLINIC_ADMIN` | List organization and clinic memberships |
+| `POST` | `/api/v1/memberships` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Invite/assign staff member to organization |
+| `PATCH` | `/api/v1/memberships/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Update member role or status |
+| `DELETE` | `/api/v1/memberships/:id` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Revoke staff membership |
+| `GET` | `/api/v1/audit-logs` | `SUPER_ADMIN`, `CLINIC_ADMIN` | Query immutable audit log events |
 
 ---
 
 ## 4. Role-Based Access Control (RBAC) Matrix
 
-| Permission / Action | SUPER_ADMIN | CLINIC_ADMIN | DOCTOR | RECEPTIONIST | LAB_STAFF |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| Manage Organizations | ✅ | ⚠️ Own Tenant | ❌ | ❌ | ❌ |
-| Create / Edit Clinics | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Manage Staff & Memberships | ✅ | ✅ | ❌ | ❌ | ❌ |
-| View System Audit Logs | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Manage Appointments & Queue | ✅ | ✅ | ✅ | ✅ | ❌ |
-| View Patient Records | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Laboratory Test & Reports | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Change Own Profile | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Action / Resource | SUPER_ADMIN | CLINIC_ADMIN | DOCTOR | RECEPTIONIST | LAB_STAFF | PATIENT |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Manage Organizations | ✅ | ⚠️ Own Tenant | ❌ | ❌ | ❌ | ❌ |
+| Create / Edit Clinics | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage Doctors | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View Unmasked Doctor License | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage Staff Members | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Register Patients | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| View Patient Records | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ Own Record |
+| Toggle Patient Status | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View System Audit Logs | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Change Own Profile | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
-## 5. Standard Response Envelope
+## 5. Security & Privacy Highlights
 
-```json
-{
-  "success": true,
-  "message": "Operation completed successfully",
-  "data": { ... },
-  "timestamp": "2026-11-09T12:00:00.000Z"
-}
-```
-
-## 6. Standard Error Response
-
-```json
-{
-  "success": false,
-  "statusCode": 403,
-  "error": "Forbidden",
-  "message": "Cross-tenant access forbidden. You are not a member of this organization.",
-  "errorCode": "FORBIDDEN",
-  "timestamp": "2026-11-09T12:00:00.000Z",
-  "path": "/api/v1/organizations/org-b-uuid"
-}
-```
+1. **Doctor Registration Number Privacy**: To safeguard medical license numbers from unauthorized internal scraping, `DoctorService` automatically masks `registrationNumber` to `'***RESTRICTED***'` whenever requested by non-administrator roles (`DOCTOR`, `RECEPTIONIST`, `LAB_STAFF`, `PATIENT`).
+2. **Deterministic MRN Generation**: The patient number is auto-generated as `MRN-YYYY-XXXX` where `XXXX` is a zero-padded sequential counter based on the organization's existing patient count for the current calendar year.
+3. **Duplicate Prevention**: Registration attempts with duplicate clinic ID, phone number, and full name are intercepted with `409 ConflictException`.
+4. **Tenant Isolation**: Cross-tenant record lookups return `403 ForbiddenException` (or `404 Not Found`) and emit structured security audit entries.

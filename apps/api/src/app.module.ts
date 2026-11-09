@@ -12,8 +12,9 @@ import { UserModule } from './modules/user/user.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { AuditModule } from './modules/audit/audit.module';
 
-// Future Phase Architectural Placeholders
+// Phase 3 Functional Clinical & Staff Modules
 import { DoctorModule } from './modules/doctor/doctor.module';
+import { StaffModule } from './modules/staff/staff.module';
 import { PatientModule } from './modules/patient/patient.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
 import { QueueModule } from './modules/queue/queue.module';
@@ -41,8 +42,9 @@ import { ReportModule } from './modules/report/report.module';
     MembershipModule,
     AuditModule,
 
-    // Architectural module boundaries
+    // Phase 3 Core Modules
     DoctorModule,
+    StaffModule,
     PatientModule,
     AppointmentModule,
     QueueModule,

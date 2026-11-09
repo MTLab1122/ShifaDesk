@@ -7,6 +7,9 @@ import {
   UserProfile,
   OrganizationMembership,
   AuditLog,
+  Doctor,
+  StaffMember,
+  Patient,
   PaginatedResult,
 } from '@matabai/shared';
 
@@ -129,10 +132,15 @@ export class ApiClient {
 
   // Clinics Endpoints
   static clinics = {
-    list: (orgId?: string, page = 1, limit = 20) =>
-      ApiClient.request<PaginatedResult<Clinic>>(
-        `/clinics?page=${page}&limit=${limit}${orgId ? `&organizationId=${orgId}` : ''}`,
-      ),
+    list: (params?: { organizationId?: string; page?: number; limit?: number; search?: string; status?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.organizationId) query.set('organizationId', params.organizationId);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.search) query.set('search', params.search);
+      if (params?.status) query.set('status', params.status);
+      return ApiClient.request<PaginatedResult<Clinic>>(`/clinics?${query.toString()}`);
+    },
     get: (id: string) => ApiClient.request<Clinic>(`/clinics/${id}`),
     create: (data: {
       organizationId: string;
@@ -142,6 +150,7 @@ export class ApiClient {
       phone?: string | null;
       email?: string | null;
       timezone?: string;
+      status?: string;
     }) =>
       ApiClient.request<Clinic>('/clinics', {
         method: 'POST',
@@ -151,6 +160,163 @@ export class ApiClient {
       ApiClient.request<Clinic>(`/clinics/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      ApiClient.request<Clinic>(`/clinics/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+  };
+
+  // Doctors Endpoints
+  static doctors = {
+    list: (params?: {
+      organizationId?: string;
+      clinicId?: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+      specialty?: string;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.organizationId) query.set('organizationId', params.organizationId);
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.search) query.set('search', params.search);
+      if (params?.status) query.set('status', params.status);
+      if (params?.specialty) query.set('specialty', params.specialty);
+      return ApiClient.request<PaginatedResult<Doctor>>(`/doctors?${query.toString()}`);
+    },
+    get: (id: string) => ApiClient.request<Doctor>(`/doctors/${id}`),
+    create: (data: {
+      clinicId: string;
+      fullName: string;
+      email?: string | null;
+      phone: string;
+      specialty: string;
+      qualification: string;
+      registrationNumber?: string;
+      consultationFee: number;
+      biography?: string | null;
+      profileImageUrl?: string | null;
+      status?: string;
+      organizationId?: string;
+    }) =>
+      ApiClient.request<Doctor>('/doctors', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Partial<Doctor>) =>
+      ApiClient.request<Doctor>(`/doctors/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      ApiClient.request<Doctor>(`/doctors/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+  };
+
+  // Staff Members Endpoints
+  static staff = {
+    list: (params?: {
+      organizationId?: string;
+      clinicId?: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      designation?: string;
+      department?: string;
+      status?: string;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.organizationId) query.set('organizationId', params.organizationId);
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.search) query.set('search', params.search);
+      if (params?.designation) query.set('designation', params.designation);
+      if (params?.department) query.set('department', params.department);
+      if (params?.status) query.set('status', params.status);
+      return ApiClient.request<PaginatedResult<StaffMember>>(`/staff?${query.toString()}`);
+    },
+    get: (id: string) => ApiClient.request<StaffMember>(`/staff/${id}`),
+    create: (data: {
+      clinicId: string;
+      fullName: string;
+      email: string;
+      phone: string;
+      designation: string;
+      department: string;
+      employmentStatus?: string;
+      organizationId?: string;
+    }) =>
+      ApiClient.request<StaffMember>('/staff', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Partial<StaffMember>) =>
+      ApiClient.request<StaffMember>(`/staff/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      ApiClient.request<StaffMember>(`/staff/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+  };
+
+  // Patients Endpoints
+  static patients = {
+    list: (params?: {
+      organizationId?: string;
+      clinicId?: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.organizationId) query.set('organizationId', params.organizationId);
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.search) query.set('search', params.search);
+      if (params?.status) query.set('status', params.status);
+      return ApiClient.request<PaginatedResult<Patient>>(`/patients?${query.toString()}`);
+    },
+    get: (id: string) => ApiClient.request<Patient>(`/patients/${id}`),
+    create: (data: {
+      clinicId: string;
+      fullName: string;
+      phone: string;
+      email?: string | null;
+      dateOfBirth?: string | null;
+      gender?: string | null;
+      address?: string | null;
+      emergencyContactName?: string | null;
+      emergencyContactPhone?: string | null;
+      consentStatus?: string;
+      status?: string;
+      organizationId?: string;
+    }) =>
+      ApiClient.request<Patient>('/patients', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Partial<Patient>) =>
+      ApiClient.request<Patient>(`/patients/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      ApiClient.request<Patient>(`/patients/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
       }),
   };
 

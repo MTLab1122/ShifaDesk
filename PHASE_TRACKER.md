@@ -2,7 +2,7 @@
 
 Founder: **Muhammad Talha**  
 Project: **MatabAI (ShifaDesk)**  
-Current Status: **Phase 0, Phase 1 & Phase 2 Verified & Complete**
+Current Status: **Phase 0, Phase 1, Phase 2 & Phase 3 Verified & Complete**
 
 ---
 
@@ -11,39 +11,52 @@ Current Status: **Phase 0, Phase 1 & Phase 2 Verified & Complete**
 | Phase | Description | Status | Gate Condition |
 | :---: | :--- | :---: | :--- |
 | **0** | **Engineering Foundation & Monorepo Initialization** | **VERIFIED** | Monorepo builds, health check passes, test suites pass, docs complete. Committed (`c9e3645`). |
-| **1** | **Frontend UI/UX, Design System & Application Foundation** | **VERIFIED** | Responsive Next.js 15 UI, 28 pages, RTL multilingual support (En, Ur, Ps), live queue board, patient portal. |
-| **2** | **Backend Modular Monolith, Database, Auth & Tenant Isolation** | **VERIFIED** | Real PostgreSQL/Supabase schema, Prisma ORM, 5-role RBAC, TenantGuard, Supabase JWT verification, REST endpoints, audit logs. |
-| **3** | Outpatient Appointments, Walk-in Queue & Token Engine | ⏸️ NEXT | Founder approval of Phase 1 & Phase 2 report. |
-| **4** | Multilingual WhatsApp & AI Conversational Triage Intake | ⏸️ QUEUED | Completion of Phase 3. |
-| **5** | Diagnostic Laboratory, Pathology & Financial Analytics | ⏸️ QUEUED | Completion of Phase 4. |
+| **1** | **Frontend UI/UX, Design System & Application Foundation** | **VERIFIED** | Responsive Next.js 15 UI, 29 routes, RTL multilingual support (En, Ur, Ps), live queue board, patient portal. |
+| **2** | **Backend Modular Monolith, Database, Auth & Tenant Isolation** | **VERIFIED** | Real PostgreSQL/Supabase schema, Prisma ORM, 5-role RBAC, TenantGuard, Supabase JWT verification, REST endpoints, audit logs. Committed (`c72c044`). |
+| **3** | **Clinic, Doctor, Staff & Patient Management** | **VERIFIED** | Real database persistence, multi-tenant RLS, strict RBAC, registration number privacy masking, MRN generation, duplicate prevention, 4 full dashboard interfaces, 44 backend unit tests (100% passing). |
+| **4** | **Outpatient Appointments, Walk-in Queue & Token Engine** | ⏸️ NEXT | Founder sign-off of Phase 3 deliverables. |
+| **5** | **Multilingual WhatsApp & AI Conversational Triage Intake** | ⏸️ QUEUED | Completion of Phase 4. |
+| **6** | **Diagnostic Laboratory, Pathology & Financial Analytics** | ⏸️ QUEUED | Completion of Phase 5. |
 
 ---
 
-## 📋 Phase 1 Execution Checklist (Complete)
-- [x] Premium healthcare SaaS design system with Shadcn UI & Tailwind CSS
-- [x] Multilingual localization engine supporting English, Urdu (RTL), and Pashto (RTL)
-- [x] Dynamic role-switching test harness for all 5 roles (`SUPER_ADMIN`, `CLINIC_ADMIN`, `DOCTOR`, `RECEPTIONIST`, `LAB_STAFF`)
-- [x] Authentication layout & pages (`/login`, `/forgot-password`, `/reset-password`, `/accept-invitation`)
-- [x] Administrative Dashboard with collapsible sidebar, breadcrumbs, and tenant selector
-- [x] Clinical modules (`/dashboard/clinics`, `/dashboard/doctors`, `/dashboard/receptionists`, `/dashboard/patients`, `/dashboard/appointments`)
-- [x] Live Outpatient Queue caller board (`/dashboard/queue`)
-- [x] WhatsApp Reception chat interface (`/dashboard/conversations`)
-- [x] Pathology lab test catalog & report viewer (`/dashboard/laboratory`, `/dashboard/laboratory/tests`, `/dashboard/laboratory/reports`)
-- [x] Notification center & clinic analytics reports (`/dashboard/notifications`, `/dashboard/reports`)
-- [x] System settings & facility setup (`/dashboard/settings`)
-- [x] Dedicated mobile-first Patient Portal (`/patient`, `/patient/book-appointment`, `/patient/appointments`, `/patient/tokens`, `/patient/profile`)
+## 📋 Phase 3 Execution Checklist (Complete & Verified)
 
----
+### Database & Security
+- [x] Prisma models: `Doctor`, `DoctorClinicAssignment`, `StaffMember`, `Patient`
+- [x] Multi-tenant RLS policies for doctors, assignments, staff, and patients in `infrastructure/database/rls-policies.sql`
+- [x] Generated Prisma Client v6.19.3 (`pnpm run db:generate`)
+- [x] Privacy rule: Doctor registration numbers masked to `***RESTRICTED***` for non-administrative roles
+- [x] Automated MRN generator: `MRN-YYYY-XXXX` format deterministic generation
+- [x] Duplicate detection: Enforced for doctors (registration number) and patients (`clinic_id` + `phone` + `full_name`)
 
-## 📋 Phase 2 Execution Checklist (Complete)
-- [x] PostgreSQL database foundation on Supabase with Prisma ORM
-- [x] 6 Foundational multi-tenant models (`organizations`, `clinics`, `user_profiles`, `organization_memberships`, `clinic_memberships`, `audit_logs`)
-- [x] Row-Level Security policies (`infrastructure/database/rls-policies.sql`)
-- [x] Supabase Auth JWT verification guard with just-in-time user synchronization
-- [x] 5-Role Role-Based Access Control (`RolesGuard`, `@Roles(...)`)
-- [x] Multi-tenant isolation guard (`TenantGuard`, `@CurrentTenant()`, `@CurrentClinic()`)
-- [x] Immutable compliance audit logging (`AuditService`, `GET /api/v1/audit-logs`)
-- [x] RESTful CRUD endpoints under `/api/v1` for Organizations, Clinics, Users, Memberships, Auth, and Health
-- [x] 14 Automated backend Jest unit & integration tests (`auth-rbac-tenant.spec.ts`, `health.controller.spec.ts`, `env.config.spec.ts`)
-- [x] 4 Frontend Vitest unit tests (`apps/web/test/page.test.tsx`)
-- [x] Zero-error monorepo compilation (`build:packages`, `build:api`, `build:web`)
+### Shared Packages & Validation
+- [x] `@matabai/shared`: Enums (`StaffDesignation`, `PatientConsentStatus`) and interfaces (`Doctor`, `DoctorClinicAssignment`, `StaffMember`, `Patient`)
+- [x] `@matabai/validation`: Zod schemas for Clinic status update, Doctor CRUD, Staff CRUD, and Patient CRUD
+- [x] `pnpm run build:packages` passed with zero errors
+
+### Backend Modular Monolith
+- [x] `ClinicModule`: Enhanced with search, status filters, and `PATCH /clinics/:id/status`
+- [x] `DoctorModule`: `DoctorService`, `DoctorController` with full CRUD, status toggle, privacy masking, audit logging
+- [x] `StaffModule`: `StaffService`, `StaffController` with full CRUD, status toggle, designation support, audit logging
+- [x] `PatientModule`: `PatientService`, `PatientController` with full CRUD, status toggle, MRN generation, duplicate check, audit logging
+- [x] Registered all modules in `AppModule`
+
+### Automated Tests & Verification
+- [x] `apps/api/src/modules/clinic/clinic.spec.ts`: 8/8 tests passed
+- [x] `apps/api/src/modules/doctor/doctor.spec.ts`: 7/7 tests passed (includes privacy masking and role guard)
+- [x] `apps/api/src/modules/staff/staff.spec.ts`: 7/7 tests passed (includes receptionist/lab staff and privilege escalation guard)
+- [x] `apps/api/src/modules/patient/patient.spec.ts`: 8/8 tests passed (includes MRN generation and cross-tenant blocking)
+- [x] All 7 backend test suites: **44 tests passed 100%**
+- [x] Web test suite: **4 tests passed 100%**
+- [x] Full monorepo typecheck: `pnpm run typecheck` **100% clean**
+- [x] Full monorepo lint: `pnpm run lint` **100% clean** (0 errors)
+- [x] NestJS API build: `pnpm run build:api` **Successful** (`dist/main.js`)
+- [x] Next.js Web build: `pnpm run build:web` **Successful** (29 static pages generated)
+
+### Frontend Integration
+- [x] Updated `apps/web/lib/api-client.ts` with complete real endpoints for clinics, doctors, staff, patients
+- [x] Connected Clinics page (`/dashboard/clinics`): search, status filter, modal add/edit, active/inactive toggle
+- [x] Connected Doctors page (`/dashboard/doctors`): search, clinic filter, status filter, modal add/edit, detail view, active/inactive toggle
+- [x] Connected Staff page (`/dashboard/receptionists` and `/dashboard/staff`): designation filter, clinic filter, modal add/edit, detail view, active/inactive toggle
+- [x] Connected Patients page (`/dashboard/patients`): search by name/MRN/phone, clinic filter, status filter, register modal, chart view, active/inactive toggle

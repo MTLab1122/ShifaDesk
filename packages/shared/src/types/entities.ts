@@ -70,3 +70,73 @@ export interface AuditLog {
   metadata?: Record<string, unknown> | null;
   createdAt: string;
 }
+
+export interface Doctor {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  userProfileId?: string | null;
+  fullName: string;
+  email?: string | null;
+  phone: string;
+  specialty: string;
+  qualification: string;
+  registrationNumber?: string; // Private, masked for non-admins
+  consultationFee: number;
+  biography?: string | null;
+  profileImageUrl?: string | null;
+  status: EntityStatus | string;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+  organization?: Organization;
+}
+
+export interface DoctorClinicAssignment {
+  id: string;
+  doctorId: string;
+  clinicId: string;
+  organizationId: string;
+  status: EntityStatus | string;
+  createdAt: string;
+  clinic?: Clinic;
+}
+
+export interface StaffMember {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  userProfileId?: string | null;
+  fullName: string;
+  email: string;
+  phone: string;
+  designation: string;
+  department: string;
+  employmentStatus: EntityStatus | string;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+  organization?: Organization;
+}
+
+export interface Patient {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  userProfileId?: string | null;
+  patientNumber: string;
+  fullName: string;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  phone: string;
+  email?: string | null;
+  address?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  consentStatus: string;
+  status: EntityStatus | string;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+}
+

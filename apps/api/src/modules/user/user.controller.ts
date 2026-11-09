@@ -34,3 +34,4 @@ export class UserController {
     return this.userService.updateMe(user, validated);
   }
 }
+

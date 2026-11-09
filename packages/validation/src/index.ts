@@ -6,3 +6,6 @@ export * from './user.schema.js';
 export * from './membership.schema.js';
 export * from './auth.schema.js';
 export * from './audit.schema.js';
+export * from './doctor.schema.js';
+export * from './staff.schema.js';
+export * from './patient.schema.js';

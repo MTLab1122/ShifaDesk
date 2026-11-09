@@ -34,3 +34,9 @@ export const updateClinicSchema = z.object({
 
 export type CreateClinicDto = z.infer<typeof createClinicSchema>;
 export type UpdateClinicDto = z.infer<typeof updateClinicSchema>;
+
+export const updateClinicStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']),
+});
+export type UpdateClinicStatusDto = z.infer<typeof updateClinicStatusSchema>;
+

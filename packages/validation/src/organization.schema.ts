@@ -24,3 +24,4 @@ export const updateOrganizationSchema = z.object({
 
 export type CreateOrganizationDto = z.infer<typeof createOrganizationSchema>;
 export type UpdateOrganizationDto = z.infer<typeof updateOrganizationSchema>;
+

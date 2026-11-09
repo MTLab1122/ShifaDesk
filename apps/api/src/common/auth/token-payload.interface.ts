@@ -10,3 +10,4 @@ export interface AuthenticatedUser {
   clinicId?: string;
   permissions: string[];
 }
+

@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
+import { PatientController } from './patient.controller';
+import { PatientService } from './patient.service';
 
-/**
- * Architectural Module Placeholder: PatientModule
- * Scope: Patient registration, medical histories, demographics, identity verification
- */
 @Module({
-  controllers: [],
-  providers: [],
-  exports: [],
+  controllers: [PatientController],
+  providers: [PatientService],
+  exports: [PatientService],
 })
 export class PatientModule {}

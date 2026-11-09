@@ -77,3 +77,4 @@ export class TenantController {
     return this.tenantService.update(id, validated, user);
   }
 }
+

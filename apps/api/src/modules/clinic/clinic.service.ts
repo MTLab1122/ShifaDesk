@@ -17,9 +17,15 @@ export class ClinicService {
     private readonly audit: AuditService,
   ) {}
 
-  async findAll(user: AuthenticatedUser, organizationId?: string, page = 1, limit = 20) {
+  async findAll(
+    user: AuthenticatedUser,
+    organizationId?: string,
+    page = 1,
+    limit = 20,
+    search?: string,
+    status?: string,
+  ) {
     const skip = (Math.max(1, page) - 1) * limit;
-
     const targetOrgId = organizationId || user.organizationId;
 
     if (!targetOrgId && user.role !== UserRole.SUPER_ADMIN) {
@@ -31,7 +37,6 @@ export class ClinicService {
       where.organizationId = targetOrgId;
     }
 
-    // Non-super admins can only see clinics if they belong to the organization
     if (user.role !== UserRole.SUPER_ADMIN && targetOrgId) {
       const membership = await this.prisma.organizationMembership.findFirst({
         where: {
@@ -44,6 +49,18 @@ export class ClinicService {
       if (!membership) {
         throw new ForbiddenException('Access denied to clinics in this organization');
       }
+    }
+
+    if (search && search.trim()) {
+      where.OR = [
+        { name: { contains: search.trim(), mode: 'insensitive' } },
+        { address: { contains: search.trim(), mode: 'insensitive' } },
+        { phone: { contains: search.trim(), mode: 'insensitive' } },
+      ];
+    }
+
+    if (status && status.trim()) {
+      where.status = status.trim();
     }
 
     const [items, totalItems] = await Promise.all([
@@ -93,7 +110,7 @@ export class ClinicService {
   }
 
   async create(dto: CreateClinicDto, user: AuthenticatedUser) {
-    // Validate that user is admin of the target organization
+    // Validate that user is admin of target organization
     if (user.role !== UserRole.SUPER_ADMIN) {
       const membership = await this.prisma.organizationMembership.findFirst({
         where: {
@@ -105,13 +122,12 @@ export class ClinicService {
       });
 
       if (!membership) {
-        throw new ForbiddenException(
-          'Only organization administrators can create clinics',
-        );
+        throw new ForbiddenException('Only organization admins can create clinics');
       }
     }
 
-    const existing = await this.prisma.clinic.findUnique({
+    // Check slug uniqueness within organization
+    const existingSlug = await this.prisma.clinic.findUnique({
       where: {
         organizationId_slug: {
           organizationId: dto.organizationId,
@@ -120,47 +136,31 @@ export class ClinicService {
       },
     });
 
-    if (existing) {
-      throw new ConflictException(
-        `Clinic with slug '${dto.slug}' already exists in this organization`,
-      );
+    if (existingSlug) {
+      throw new ConflictException(`Clinic with slug '${dto.slug}' already exists in this organization`);
     }
 
-    const clinic = await this.prisma.$transaction(async (tx) => {
-      const createdClinic = await tx.clinic.create({
-        data: {
-          organizationId: dto.organizationId,
-          name: dto.name,
-          slug: dto.slug,
-          address: dto.address,
-          phone: dto.phone,
-          email: dto.email,
-          timezone: dto.timezone || 'Asia/Karachi',
-          status: dto.status || 'ACTIVE',
-        },
-      });
-
-      // Link creator to clinic membership as CLINIC_ADMIN
-      await tx.clinicMembership.create({
-        data: {
-          clinicId: createdClinic.id,
-          userProfileId: user.id,
-          role: UserRole.CLINIC_ADMIN,
-          status: 'ACTIVE',
-        },
-      });
-
-      return createdClinic;
+    const clinic = await this.prisma.clinic.create({
+      data: {
+        organizationId: dto.organizationId,
+        name: dto.name,
+        slug: dto.slug,
+        address: dto.address,
+        phone: dto.phone,
+        email: dto.email,
+        timezone: dto.timezone || 'Asia/Karachi',
+        status: dto.status || 'ACTIVE',
+      },
     });
 
     await this.audit.log({
-      organizationId: clinic.organizationId,
-      clinicId: clinic.id,
       actorUserId: user.id,
-      action: 'CLINIC_CREATED',
-      resourceType: 'Clinic',
+      organizationId: dto.organizationId,
+      clinicId: clinic.id,
+      action: 'CLINIC_CREATE',
+      resourceType: 'clinic',
       resourceId: clinic.id,
-      metadata: { slug: clinic.slug, name: clinic.name },
+      metadata: { name: clinic.name, slug: clinic.slug },
     });
 
     return clinic;
@@ -169,12 +169,23 @@ export class ClinicService {
   async update(id: string, dto: UpdateClinicDto, user: AuthenticatedUser) {
     const clinic = await this.findOne(id, user);
 
-    if (user.role !== UserRole.SUPER_ADMIN && user.role !== UserRole.CLINIC_ADMIN) {
-      throw new ForbiddenException('Only administrators can update clinic details');
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      const membership = await this.prisma.organizationMembership.findFirst({
+        where: {
+          organizationId: clinic.organizationId,
+          userProfileId: user.id,
+          role: { in: [UserRole.SUPER_ADMIN, UserRole.CLINIC_ADMIN] },
+          status: 'ACTIVE',
+        },
+      });
+
+      if (!membership) {
+        throw new ForbiddenException('Only clinic administrators can update clinic details');
+      }
     }
 
     if (dto.slug && dto.slug !== clinic.slug) {
-      const existing = await this.prisma.clinic.findUnique({
+      const existingSlug = await this.prisma.clinic.findUnique({
         where: {
           organizationId_slug: {
             organizationId: clinic.organizationId,
@@ -182,34 +193,69 @@ export class ClinicService {
           },
         },
       });
-      if (existing) {
-        throw new ConflictException(
-          `Clinic with slug '${dto.slug}' already exists in this organization`,
-        );
+
+      if (existingSlug && existingSlug.id !== id) {
+        throw new ConflictException(`Clinic with slug '${dto.slug}' already exists`);
       }
     }
 
     const updated = await this.prisma.clinic.update({
       where: { id },
       data: {
-        ...(dto.name && { name: dto.name }),
-        ...(dto.slug && { slug: dto.slug }),
-        ...(dto.address !== undefined && { address: dto.address }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
-        ...(dto.email !== undefined && { email: dto.email }),
-        ...(dto.timezone && { timezone: dto.timezone }),
-        ...(dto.status && { status: dto.status }),
+        name: dto.name,
+        slug: dto.slug,
+        address: dto.address,
+        phone: dto.phone,
+        email: dto.email,
+        timezone: dto.timezone,
+        status: dto.status,
       },
     });
 
     await this.audit.log({
-      organizationId: updated.organizationId,
-      clinicId: updated.id,
       actorUserId: user.id,
-      action: 'CLINIC_UPDATED',
-      resourceType: 'Clinic',
-      resourceId: updated.id,
-      metadata: dto as Record<string, unknown>,
+      organizationId: clinic.organizationId,
+      clinicId: id,
+      action: 'CLINIC_UPDATE',
+      resourceType: 'clinic',
+      resourceId: id,
+      metadata: { changes: dto },
+    });
+
+    return updated;
+  }
+
+  async updateStatus(id: string, status: string, user: AuthenticatedUser) {
+    const clinic = await this.findOne(id, user);
+
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      const membership = await this.prisma.organizationMembership.findFirst({
+        where: {
+          organizationId: clinic.organizationId,
+          userProfileId: user.id,
+          role: { in: [UserRole.SUPER_ADMIN, UserRole.CLINIC_ADMIN] },
+          status: 'ACTIVE',
+        },
+      });
+
+      if (!membership) {
+        throw new ForbiddenException('Only clinic administrators can change clinic operational status');
+      }
+    }
+
+    const updated = await this.prisma.clinic.update({
+      where: { id },
+      data: { status },
+    });
+
+    await this.audit.log({
+      actorUserId: user.id,
+      organizationId: clinic.organizationId,
+      clinicId: id,
+      action: 'CLINIC_STATUS_UPDATE',
+      resourceType: 'clinic',
+      resourceId: id,
+      metadata: { previousStatus: clinic.status, newStatus: status },
     });
 
     return updated;

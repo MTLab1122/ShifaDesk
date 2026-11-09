@@ -130,3 +130,103 @@ CREATE POLICY "audit_admin_select" ON audit_logs
         AND om.status = 'ACTIVE'
     )
   );
+
+-- ==============================================================================
+-- 7. Phase 3 Tables: Doctors, Assignments, Staff Members, Patients
+-- ==============================================================================
+ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doctor_clinic_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
+
+-- Doctors: Members of the same organization can read doctors
+CREATE POLICY "doctor_org_select" ON doctors
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = doctors.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Doctors: Only Clinic/Super Admins can create or update doctors
+CREATE POLICY "doctor_admin_write" ON doctors
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = doctors.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Staff Members: Members of the same organization can read staff
+CREATE POLICY "staff_org_select" ON staff_members
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = staff_members.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Staff Members: Only Clinic/Super Admins can manage staff
+CREATE POLICY "staff_admin_write" ON staff_members
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = staff_members.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Patients: Only authorized staff (Super Admin, Clinic Admin, Doctor, Receptionist) can view patients in their organization
+CREATE POLICY "patient_org_staff_select" ON patients
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = patients.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+    OR (
+      user_profile_id IS NOT NULL AND
+      EXISTS (
+        SELECT 1 FROM user_profiles up
+        WHERE up.id = patients.user_profile_id
+          AND up.auth_user_id = auth.uid()
+      )
+    )
+  );
+
+-- Patients: Admins and Receptionists can insert/update patients
+CREATE POLICY "patient_reception_write" ON patients
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = patients.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+

@@ -10,3 +10,4 @@ export const auditLogQuerySchema = paginationQuerySchema.extend({
 });
 
 export type AuditLogQueryDto = z.infer<typeof auditLogQuerySchema>;
+

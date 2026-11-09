@@ -31,3 +31,4 @@ export const CurrentClinic = createParamDecorator(
     return request.clinicId || request.headers['x-clinic-id'];
   },
 );
+

@@ -7,3 +7,4 @@ export const updateUserProfileSchema = z.object({
 });
 
 export type UpdateUserProfileDto = z.infer<typeof updateUserProfileSchema>;
+

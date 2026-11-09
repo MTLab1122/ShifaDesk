@@ -32,3 +32,4 @@ export const updateMembershipSchema = z.object({
 
 export type CreateMembershipDto = z.infer<typeof createMembershipSchema>;
 export type UpdateMembershipDto = z.infer<typeof updateMembershipSchema>;
+

@@ -52,6 +52,20 @@ export enum QueueStatus {
   SKIPPED = 'SKIPPED',
 }
 
+export enum StaffDesignation {
+  RECEPTIONIST = 'RECEPTIONIST',
+  LAB_STAFF = 'LAB_STAFF',
+  NURSE = 'NURSE',
+  ADMINISTRATIVE = 'ADMINISTRATIVE',
+  OTHER = 'OTHER',
+}
+
+export enum PatientConsentStatus {
+  GRANTED = 'GRANTED',
+  PENDING = 'PENDING',
+  REVOKED = 'REVOKED',
+}
+
 export const PERMISSIONS = {
   // Organizations
   ORGANIZATION_READ: 'organization:read',
