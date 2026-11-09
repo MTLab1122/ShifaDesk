@@ -82,3 +82,4 @@ export const updateWorkingHoursSchema = z
   );
 
 export type UpdateWorkingHoursDto = z.infer<typeof updateWorkingHoursSchema>;
+

@@ -52,6 +52,62 @@ export enum QueueStatus {
   SKIPPED = 'SKIPPED',
 }
 
+export enum QueueSessionStatus {
+  NOT_STARTED = 'NOT_STARTED',
+  ACTIVE = 'ACTIVE',
+  PAUSED = 'PAUSED',
+  CLOSED = 'CLOSED',
+}
+
+export enum QueueTokenStatus {
+  WAITING = 'WAITING',
+  CALLED = 'CALLED',
+  SERVING = 'SERVING',
+  COMPLETED = 'COMPLETED',
+  SKIPPED = 'SKIPPED',
+  CANCELLED = 'CANCELLED',
+  NO_SHOW = 'NO_SHOW',
+}
+
+export enum TokenPriorityType {
+  NORMAL = 'NORMAL',
+  PRIORITY = 'PRIORITY',
+}
+
+export const VALID_QUEUE_TOKEN_TRANSITIONS: Record<QueueTokenStatus, QueueTokenStatus[]> = {
+  [QueueTokenStatus.WAITING]: [
+    QueueTokenStatus.CALLED,
+    QueueTokenStatus.CANCELLED,
+    QueueTokenStatus.SKIPPED,
+    QueueTokenStatus.NO_SHOW,
+  ],
+  [QueueTokenStatus.CALLED]: [
+    QueueTokenStatus.SERVING,
+    QueueTokenStatus.WAITING,
+    QueueTokenStatus.SKIPPED,
+    QueueTokenStatus.NO_SHOW,
+    QueueTokenStatus.CANCELLED,
+  ],
+  [QueueTokenStatus.SERVING]: [
+    QueueTokenStatus.COMPLETED,
+    QueueTokenStatus.WAITING, // Authorized correction workflow
+  ],
+  [QueueTokenStatus.SKIPPED]: [
+    QueueTokenStatus.WAITING, // Authorized restoration
+    QueueTokenStatus.CANCELLED,
+  ],
+  [QueueTokenStatus.COMPLETED]: [],
+  [QueueTokenStatus.CANCELLED]: [],
+  [QueueTokenStatus.NO_SHOW]: [],
+};
+
+export const VALID_QUEUE_SESSION_TRANSITIONS: Record<QueueSessionStatus, QueueSessionStatus[]> = {
+  [QueueSessionStatus.NOT_STARTED]: [QueueSessionStatus.ACTIVE, QueueSessionStatus.CLOSED],
+  [QueueSessionStatus.ACTIVE]: [QueueSessionStatus.PAUSED, QueueSessionStatus.CLOSED],
+  [QueueSessionStatus.PAUSED]: [QueueSessionStatus.ACTIVE, QueueSessionStatus.CLOSED],
+  [QueueSessionStatus.CLOSED]: [],
+};
+
 export enum StaffDesignation {
   RECEPTIONIST = 'RECEPTIONIST',
   LAB_STAFF = 'LAB_STAFF',

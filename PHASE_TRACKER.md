@@ -2,7 +2,7 @@
 
 Founder: **Muhammad Talha**  
 Project: **MatabAI (ShifaDesk)**  
-Current Status: **Phase 0, Phase 1, Phase 2, Phase 3 & Phase 4 Verified & Complete**
+Current Status: **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 & Phase 5 Verified & Complete**
 
 ---
 
@@ -14,74 +14,91 @@ Current Status: **Phase 0, Phase 1, Phase 2, Phase 3 & Phase 4 Verified & Comple
 | **1** | **Frontend UI/UX, Design System & Application Foundation** | **VERIFIED** | Responsive Next.js 15 UI, 29 routes, RTL multilingual support (En, Ur, Ps), live queue board, patient portal. |
 | **2** | **Backend Modular Monolith, Database, Auth & Tenant Isolation** | **VERIFIED** | Real PostgreSQL/Supabase schema, Prisma ORM, 5-role RBAC, TenantGuard, Supabase JWT verification, REST endpoints, audit logs. Committed (`c72c044`). |
 | **3** | **Clinic, Doctor, Staff & Patient Management** | **VERIFIED** | Real database persistence, multi-tenant RLS, strict RBAC, registration number privacy masking, MRN generation, duplicate prevention, 4 full dashboard interfaces, 44 backend unit tests (100% passing). Committed (`749d0b2`). |
-| **4** | **Appointment Scheduling & Booking Engine** | **VERIFIED** | Real database persistence, doctor weekly working hours, schedule exceptions/leaves, dynamic timezone slot generation, double-booking prevention under concurrency, state machine transitions, guided booking wizards, calendar/table views, 68 backend tests (100% passing). |
-| **5** | **Outpatient Walk-in Queue & Live Token Engine** | ⏸️ NEXT | Founder sign-off of Phase 4 deliverables. |
-| **6** | **Multilingual WhatsApp & AI Conversational Triage Intake** | ⏸️ QUEUED | Completion of Phase 5. |
+| **4** | **Appointment Scheduling & Booking Engine** | **VERIFIED** | Real database persistence, doctor weekly working hours, schedule exceptions/leaves, dynamic timezone slot generation, double-booking prevention under concurrency, state machine transitions, guided booking wizards, calendar/table views, 68 backend tests (100% passing). Committed (`6111058`). |
+| **5** | **Digital Token & Real-Time Queue Management** | **VERIFIED** | Real database persistence, atomic token generation, appointment & walk-in check-in, deterministic queue ordering (priority + FIFO), doctor & receptionist calling controls, real-time events, public TV monitor display, patient live queue tracker, 87 backend tests (100% passing). |
+| **6** | **Multilingual WhatsApp & AI Conversational Triage Intake** | ⏸️ NEXT | Founder sign-off of Phase 5 deliverables. |
 | **7** | **Diagnostic Laboratory, Pathology & Financial Analytics** | ⏸️ QUEUED | Completion of Phase 6. |
 
 ---
 
-## 📋 Phase 4 Execution Checklist (Complete & Verified)
+## 📋 Phase 5 Execution Checklist (Complete & Verified)
 
 ### Database & Security
-- [x] Prisma models: `DoctorWorkingHours`, `DoctorScheduleException`, `Appointment`, `AppointmentStatusHistory`
-- [x] Multi-tenant RLS policies for all 4 tables in `infrastructure/database/rls-policies.sql`
+- [x] Prisma models: `ClinicQueueSettings`, `ClinicQueueSession`, `QueueToken`, `QueueStatusHistory`
+- [x] Multi-tenant RLS policies for all 4 queue tables in `infrastructure/database/rls-policies.sql`
 - [x] Generated Prisma Client v6.19.3 (`pnpm run db:generate`)
-- [x] Deterministic appointment number generation: `APT-YYYY-XXXX` format
-- [x] Concurrency protection: Server-side `$transaction` verifies slot collisions before commit; returns `409 ConflictException` on collision
-- [x] Soft cancellation policy: Never hard-deletes appointments; transitions to `CANCELLED`, logs reason and actor, releases slot
-- [x] Privacy assurance: Slot availability endpoint never leaks patient names, notes, or MRNs
+- [x] Unique compound index `[queue_settings_id, session_date]` preventing duplicate sessions
+- [x] Concurrency safety: Server-side interactive `$transaction` for token number increments and status transitions
+- [x] Duplicate active token prevention for appointments and walk-in patients
+- [x] Public privacy protection: High-entropy revocable `public_queue_id` without exposing internal UUIDs or patient records
 
 ### Shared Packages & Validation
-- [x] `@matabai/shared`: Enums (`BookingSource`, `ScheduleExceptionType`, `VALID_APPOINTMENT_TRANSITIONS`) and interfaces (`DoctorWorkingHours`, `DoctorScheduleException`, `Appointment`, `AppointmentStatusHistory`, `AvailableSlot`)
-- [x] `@matabai/validation`: Zod schemas for working hours CRUD, schedule exceptions CRUD, appointment booking, rescheduling, cancellation, and queries
-- [x] `pnpm run build:packages` passed with zero errors
+- [x] `@matabai/shared`: Enums (`QueueSessionStatus`, `QueueTokenStatus`, `TokenPriorityType`, `VALID_QUEUE_TOKEN_TRANSITIONS`, `VALID_QUEUE_SESSION_TRANSITIONS`) and interfaces (`ClinicQueueSettings`, `ClinicQueueSession`, `QueueToken`, `QueueStatusHistory`, `PublicQueueDisplay`, `QueueStats`)
+- [x] `@matabai/validation`: Zod schemas for queue settings CRUD, queue sessions CRUD, appointment check-in, walk-in check-in, token operational actions, and priority assignment
+- [x] `pnpm run build:packages` passed cleanly with 0 errors
 
 ### Backend Modular Monolith
-- [x] `WorkingHoursService` & `WorkingHoursController`:
-  - `GET /api/v1/doctors/:doctorId/working-hours`
-  - `POST /api/v1/doctors/:doctorId/working-hours` (overlap prevention, break validation, audit log)
-  - `PATCH /api/v1/doctors/:doctorId/working-hours/:id`
-  - `DELETE /api/v1/doctors/:doctorId/working-hours/:id`
-- [x] `ScheduleExceptionsService` & `ScheduleExceptionsController`:
-  - `GET /api/v1/doctors/:doctorId/schedule-exceptions`
-  - `POST /api/v1/doctors/:doctorId/schedule-exceptions` (supports holidays, leaves, custom hours override)
-  - `PATCH /api/v1/doctors/:doctorId/schedule-exceptions/:id`
-  - `DELETE /api/v1/doctors/:doctorId/schedule-exceptions/:id`
-- [x] `SlotGenerationService` & `AvailabilityController`:
-  - `GET /api/v1/availability`
-  - Local timezone slot computation, past time filtering, break exclusion, exception overrides, booked appointment exclusion
-- [x] `AppointmentService` & `AppointmentController`:
-  - `GET /api/v1/appointments`
-  - `POST /api/v1/appointments` (interactive transaction double-booking check, status history tracking, audit logging)
-  - `GET /api/v1/appointments/:id`
-  - `POST /api/v1/appointments/:id/reschedule`
-  - `POST /api/v1/appointments/:id/cancel`
-  - `POST /api/v1/appointments/:id/status` (centralized `VALID_APPOINTMENT_TRANSITIONS` state machine)
-- [x] Registered all controllers and services in `AppointmentModule`
+- [x] `QueueSettingsService` & `QueueSettingsController`:
+  - `GET /api/v1/queue/settings` (list settings, auto-initialization fallback)
+  - `POST /api/v1/queue/settings` (create queue settings)
+  - `PATCH /api/v1/queue/settings/:id` (update queue settings)
+  - `POST /api/v1/queue/settings/:id/regenerate-public-key` (rotate public display key)
+- [x] `QueueSessionService` & `QueueSessionController`:
+  - `GET /api/v1/queue/sessions`
+  - `POST /api/v1/queue/sessions` (session initialization)
+  - `GET /api/v1/queue/sessions/:id` (session stats and active called/serving token)
+  - `POST /api/v1/queue/sessions/:id/start`, `pause`, `resume`, `close`
+- [x] `QueueTokenService` & `QueueTokenController`:
+  - `POST /api/v1/queue/check-in/appointment` (appointment check-in with validation)
+  - `POST /api/v1/queue/check-in/walk-in` (walk-in check-in with capacity check)
+  - `GET /api/v1/queue/tokens`
+  - `GET /api/v1/queue/tokens/:id`
+  - `POST /api/v1/queue/sessions/:id/call-next` (atomic FIFO calling with priority override, auto-skips unserved patient)
+  - `POST /api/v1/queue/tokens/:id/recall`
+  - `POST /api/v1/queue/tokens/:id/start-serving` (CALLED -> SERVING)
+  - `POST /api/v1/queue/tokens/:id/complete` (SERVING -> COMPLETED, completes appointment)
+  - `POST /api/v1/queue/tokens/:id/skip` (CALLED/WAITING -> SKIPPED)
+  - `POST /api/v1/queue/tokens/:id/restore` (SKIPPED -> WAITING)
+  - `POST /api/v1/queue/tokens/:id/no-show`
+  - `POST /api/v1/queue/tokens/:id/cancel`
+  - `POST /api/v1/queue/tokens/:id/priority` (updates priority and recalculates queue positions)
+- [x] `PatientQueueController`:
+  - `GET /api/v1/patient/tokens`
+  - `GET /api/v1/patient/tokens/:id` (live progress, patients ahead, doctor room, estimated wait)
+- [x] `PublicQueueController`:
+  - `GET /api/v1/public/queues/:publicQueueId` (privacy-safe waiting room display, 0 patient personal data)
+- [x] `QueueRealtimeService`:
+  - In-memory event bus broadcasting real-time queue transitions scoped by session and clinic
 
 ### Automated Tests & Verification
-- [x] `apps/api/src/modules/appointment/working-hours.spec.ts`: 6/6 tests passed
-- [x] `apps/api/src/modules/appointment/slot-generation.spec.ts`: 8/8 tests passed
-- [x] `apps/api/src/modules/appointment/appointment.spec.ts`: 10/10 tests passed (double-booking prevention, status transitions, role checks)
-- [x] All 10 backend test suites: **68 tests passed 100%** (0 failures)
+- [x] `apps/api/src/modules/queue/queue-token.spec.ts`: 7/7 tests passed (atomic generation, appointment check-in, duplicate prevention, priority ordering, transitions, skip/restore)
+- [x] `apps/api/src/modules/queue/queue-session.spec.ts`: 6/6 tests passed (session lifecycle, duplicate session prevention, pause/resume, close guard)
+- [x] `apps/api/src/modules/queue/public-queue.spec.ts`: 3/3 tests passed (privacy guarantee, disabled display rejection, 404 for invalid key)
+- [x] All 13 backend test suites: **87 tests passed 100%** (0 failures)
 - [x] Web test suite: **4 tests passed 100%** (0 failures)
+- [x] Total automated tests: **91 tests passed 100%**
 - [x] Full monorepo typecheck: `pnpm run typecheck` **100% clean** (0 errors)
 - [x] Full monorepo lint: `pnpm run lint` **100% clean** (0 errors)
 - [x] NestJS API build: `pnpm run build:api` **Successful** (`dist/main.js`)
-- [x] Next.js Web build: `pnpm run build:web` **Successful** (29 static pages generated)
+- [x] Next.js Web build: `pnpm run build:web` **Successful** (29 static + dynamic `/queue/[publicQueueId]` generated)
 
 ### Frontend Integration
-- [x] Updated `apps/web/lib/api-client.ts` with complete real endpoints for working hours, schedule exceptions, availability, and appointments
-- [x] Connected Admin Appointments page (`/dashboard/appointments`):
-  - Table view & Calendar view (Day, Week, Month modes with date navigation)
-  - Real appointment listing with status pills, doctor filters, clinic filters, and search
-  - Guided 8-step appointment booking wizard with live slot picking
-  - Appointment details view with status transition timeline and internal notes
-  - Reschedule appointment dialog with live slot selection
-  - Cancel appointment dialog with reason recording
-  - Doctor schedule management modal for working hours and breaks
-- [x] Connected Patient Booking page (`/patient/book-appointment`):
-  - 3-step intuitive booking flow with real doctor list, date picker, real slot selection, and complaint description
-- [x] Connected Patient Appointments page (`/patient/appointments`):
-  - Filter by Upcoming vs Past appointments, view booking status, cancel upcoming appointments
+- [x] Updated `apps/web/lib/api-client.ts` with complete real endpoints for queue settings, sessions, tokens, patient tokens, and public queue
+- [x] Connected Receptionist Queue Dashboard (`/dashboard/queue`):
+  - Session status bar (Active, Paused, Closed) with Start / Pause / Resume / Close controls
+  - Hero Now Serving / Active Called Card with Call Next, Recall, Start Serving, Complete Consultation, Skip
+  - 4 Live Queue Stats cards (Waiting, In Consultation, Completed, Skipped)
+  - Patient Check-In Dialog: Tab 1 (Appointment check-in) & Tab 2 (Walk-in check-in with priority & notes)
+  - Waiting Queue Table with deterministic position numbers, priority badges, and quick actions
+  - Skipped Queue Table with one-click "Restore to Queue"
+  - Completed Consultations Table
+  - Direct shortcut button to open Public Waiting Room Display
+- [x] Connected Patient Token Tracker (`/patient/tokens`):
+  - Real-time token display, live calling pulse banner ("NOW CALLING YOUR TOKEN!"), patients ahead, estimated wait time, doctor/clinic room info
+- [x] Created Public Waiting Room Display (`/queue/[publicQueueId]`):
+  - Full-screen TV waiting room monitor mode
+  - Large Now Calling/Serving token display
+  - Recently called tokens ticker
+  - Live clock and waiting stats
+  - Auto-refresh every 5s with live pulse
+  - Strict privacy: zero patient names, phones, or private data displayed

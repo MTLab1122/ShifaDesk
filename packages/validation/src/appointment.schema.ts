@@ -91,3 +91,4 @@ export const queryAppointmentsSchema = z.object({
 });
 
 export type QueryAppointmentsDto = z.infer<typeof queryAppointmentsSchema>;
+

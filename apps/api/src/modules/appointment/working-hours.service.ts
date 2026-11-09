@@ -208,3 +208,4 @@ export class WorkingHoursService {
     return { success: true, message: 'Working hours deleted successfully' };
   }
 }
+

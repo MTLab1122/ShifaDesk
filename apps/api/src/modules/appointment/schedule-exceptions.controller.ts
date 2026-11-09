@@ -68,3 +68,4 @@ export class ScheduleExceptionsController {
     return this.service.remove(doctorId, id, user);
   }
 }
+

@@ -68,3 +68,4 @@ export class WorkingHoursController {
     return this.service.remove(doctorId, id, user);
   }
 }
+

@@ -345,4 +345,114 @@ CREATE POLICY "appointment_history_select" ON appointment_status_history
     )
   );
 
+-- ==============================================================================
+-- 7. Phase 5: Digital Token & Queue Management Policies
+-- ==============================================================================
+
+-- Enable RLS on Queue tables
+ALTER TABLE clinic_queue_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinic_queue_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE queue_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE queue_status_history ENABLE ROW LEVEL SECURITY;
+
+-- Queue Settings Policies
+CREATE POLICY "queue_settings_select" ON clinic_queue_settings
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinic_queue_settings.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "queue_settings_write" ON clinic_queue_settings
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinic_queue_settings.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Queue Sessions Policies
+CREATE POLICY "queue_sessions_select" ON clinic_queue_sessions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinic_queue_sessions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "queue_sessions_write" ON clinic_queue_sessions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinic_queue_sessions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Queue Tokens Policies
+CREATE POLICY "queue_tokens_select" ON queue_tokens
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = queue_tokens.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+    OR EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = queue_tokens.patient_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "queue_tokens_write" ON queue_tokens
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = queue_tokens.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Queue Status History Policies
+CREATE POLICY "queue_history_select" ON queue_status_history
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = queue_status_history.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+
 

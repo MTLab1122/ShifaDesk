@@ -59,3 +59,4 @@ export const updateScheduleExceptionSchema = z
   );
 
 export type UpdateScheduleExceptionDto = z.infer<typeof updateScheduleExceptionSchema>;
+
