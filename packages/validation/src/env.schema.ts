@@ -30,6 +30,13 @@ export const apiEnvSchema = z.object({
     .min(32, 'JWT_SECRET must be at least 32 characters long for production security')
     .default('dev-jwt-secret-key-at-least-32-characters-long-matabai'),
   JWT_EXPIRATION: z.string().default('7d'),
+
+  // Meta WhatsApp Business Cloud API
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+  META_API_VERSION: z.string().default('v21.0'),
+  META_GRAPH_BASE_URL: z.string().url().default('https://graph.facebook.com'),
 });
 
 export const webEnvSchema = z.object({

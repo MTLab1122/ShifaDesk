@@ -13,3 +13,4 @@ export * from './working-hours.schema.js';
 export * from './schedule-exception.schema.js';
 export * from './appointment.schema.js';
 export * from './queue.schema.js';
+export * from './whatsapp.schema.js';

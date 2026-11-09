@@ -454,5 +454,152 @@ CREATE POLICY "queue_history_select" ON queue_status_history
     )
   );
 
+-- ==============================================================================
+-- 9. Phase 6: WhatsApp Business Cloud API Integration RLS Policies
+-- ==============================================================================
+
+ALTER TABLE whatsapp_integrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_webhook_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_message_templates ENABLE ROW LEVEL SECURITY;
+
+-- WhatsApp Integrations Policies
+CREATE POLICY "whatsapp_integrations_select" ON whatsapp_integrations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_integrations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "whatsapp_integrations_write" ON whatsapp_integrations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_integrations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- WhatsApp Contacts Policies
+CREATE POLICY "whatsapp_contacts_select" ON whatsapp_contacts
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_contacts.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "whatsapp_contacts_write" ON whatsapp_contacts
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_contacts.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- WhatsApp Conversations Policies
+CREATE POLICY "whatsapp_conversations_select" ON whatsapp_conversations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_conversations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "whatsapp_conversations_write" ON whatsapp_conversations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_conversations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- WhatsApp Messages Policies
+CREATE POLICY "whatsapp_messages_select" ON whatsapp_messages
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_messages.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "whatsapp_messages_write" ON whatsapp_messages
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_messages.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- WhatsApp Message Templates Policies
+CREATE POLICY "whatsapp_templates_select" ON whatsapp_message_templates
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_message_templates.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "whatsapp_templates_write" ON whatsapp_message_templates
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = whatsapp_message_templates.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+
 
 

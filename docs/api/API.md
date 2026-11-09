@@ -570,4 +570,127 @@ Public waiting room monitor endpoint (no authorization header required).
   }
   ```
 
+---
+
+## 10. WhatsApp Business Cloud API Integration Endpoints (Phase 6)
+
+### `GET /api/v1/webhooks/whatsapp`
+Meta Webhook Verification Challenge Handshake.
+- **Query Parameters:** `hub.mode`, `hub.verify_token`, `hub.challenge`.
+- **Behavior:** Returns `hub.challenge` as raw string with `200 OK` when verify token matches. Returns `403 Forbidden` on mismatch.
+
+### `POST /api/v1/webhooks/whatsapp`
+Meta Webhook Event Ingestion (Inbound Messages, Status Receipts, Handover Triggers).
+- **Security:** Verifies `X-Hub-Signature-256` HMAC-SHA256 signature using `META_APP_SECRET`.
+- **Idempotency:** Webhook event deduplication via `whatsapp_webhook_events`.
+- **Response `200 OK`:** `{ "status": "EVENT_RECEIVED" }`.
+
+### `GET /api/v1/whatsapp/integration`
+Fetches clinic Meta integration status and configuration with masked credentials.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Query:** `clinicId`.
+- **Response `200 OK`:** `WhatsappIntegration` object.
+
+### `POST /api/v1/whatsapp/integration`
+Registers or updates clinic WhatsApp Cloud API credentials.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Body:**
+  ```json
+  {
+    "clinicId": "UUID",
+    "phoneNumberId": "1234567890",
+    "wabaId": "9876543210",
+    "businessPhoneNumber": "+923001234567",
+    "displayName": "Al-Shifa Clinic",
+    "accessToken": "EAA...",
+    "webhookVerifyToken": "my-secret-token-12345"
+  }
+  ```
+- **Response `200 OK`:** Created/updated integration.
+
+### `GET /api/v1/whatsapp/integration/health`
+Live connection status check against Meta Graph API.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Query:** `clinicId`.
+- **Response `200 OK`:**
+  ```json
+  {
+    "configured": true,
+    "connected": true,
+    "status": "CONNECTED",
+    "phoneNumberId": "1234567890",
+    "businessPhoneNumber": "+923001234567",
+    "verifiedName": "Al-Shifa Clinic",
+    "webhookVerified": true,
+    "lastCheckedAt": "2026-11-09T22:30:00.000Z"
+  }
+  ```
+
+### `GET /api/v1/whatsapp/templates`
+Lists approved message templates registered for the clinic.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+- **Query:** `clinicId`.
+- **Response `200 OK`:** `WhatsappMessageTemplate[]`.
+
+### `POST /api/v1/whatsapp/send-text`
+Dispatches a free-form text message.
+- **Enforcement:** Strictly rejects (`400 Bad Request`) if 24-hour customer window is expired or recipient is opted out.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:** `{ "clinicId": "UUID", "to": "+923001234567", "message": "Text" }`.
+- **Response `200 OK`:** `WhatsappMessage`.
+
+### `POST /api/v1/whatsapp/send-template`
+Dispatches an approved Meta template message (allowed outside 24-hr window).
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:**
+  ```json
+  {
+    "clinicId": "UUID",
+    "to": "+923001234567",
+    "templateName": "appointment_confirmation",
+    "languageCode": "en_US",
+    "parameters": ["Ali", "Dr. Tariq", "2026-11-10", "10:00 AM", "A001"]
+  }
+  ```
+- **Response `200 OK`:** `WhatsappMessage`.
+
+### `GET /api/v1/whatsapp/conversations`
+Lists conversations for a clinic with filters and search.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+- **Query Parameters:** `clinicId`, `status` (`ALL`, `HUMAN_HANDOVER`, `OPEN`, `RESOLVED`), `search`, `page`, `limit`.
+- **Response `200 OK`:** Paginated list of `WhatsappConversation` with `isWithin24HourWindow` indicator.
+
+### `GET /api/v1/whatsapp/conversations/:id`
+Retrieves single conversation thread and full message history.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+- **Response `200 OK`:** `WhatsappConversation` with messages thread.
+
+### `POST /api/v1/whatsapp/conversations/:id/messages`
+Staff receptionist reply to patient conversation.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:** `{ "message": "Your prescription is ready for pickup." }`.
+- **Response `201 Created`:** `WhatsappMessage`.
+
+### `POST /api/v1/whatsapp/conversations/:id/claim`
+Receptionist claims conversation from Human Handover queue.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Response `200 OK`:** Updated `WhatsappConversation` with assigned staff user.
+
+### `POST /api/v1/whatsapp/conversations/:id/resolve`
+Resolves a conversation.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Response `200 OK`:** Updated `WhatsappConversation` with status `RESOLVED`.
+
+### `POST /api/v1/whatsapp/conversations/:id/reopen`
+Reopens a resolved conversation.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Response `200 OK`:** Updated `WhatsappConversation` with status `OPEN`.
+
+### `POST /api/v1/whatsapp/contacts/:id/consent`
+Updates patient opt-in / opt-out consent status manually.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Body:** `{ "consentStatus": "OPTED_OUT", "optOutReason": "Patient requested stop" }`.
+- **Response `200 OK`:** Updated `WhatsappContact`.
+
+
 

@@ -42,6 +42,11 @@ model Organization {
   queueSessions             ClinicQueueSession[]
   queueTokens               QueueToken[]
   queueStatusHistories      QueueStatusHistory[]
+  whatsappIntegrations      WhatsappIntegration[]
+  whatsappContacts          WhatsappContact[]
+  whatsappConversations     WhatsappConversation[]
+  whatsappMessages          WhatsappMessage[]
+  whatsappMessageTemplates  WhatsappMessageTemplate[]
 
   @@index([slug])
   @@index([status])
@@ -77,6 +82,11 @@ model Clinic {
   queueSessions              ClinicQueueSession[]
   queueTokens                QueueToken[]
   queueStatusHistories       QueueStatusHistory[]
+  whatsappIntegration        WhatsappIntegration?
+  whatsappContacts           WhatsappContact[]
+  whatsappConversations      WhatsappConversation[]
+  whatsappMessages           WhatsappMessage[]
+  whatsappMessageTemplates   WhatsappMessageTemplate[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -102,6 +112,7 @@ model UserProfile {
   doctors                 Doctor[]
   staffMembers            StaffMember[]
   patients                Patient[]
+  assignedWhatsappConversations WhatsappConversation[]
 
   @@index([authUserId])
   @@index([email])
@@ -280,6 +291,7 @@ model Patient {
   userProfile  UserProfile?  @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
   appointments Appointment[]
   queueTokens  QueueToken[]
+  whatsappContacts WhatsappContact[]
 
   @@unique([organizationId, patientNumber])
   @@index([organizationId])
@@ -534,4 +546,182 @@ model QueueStatusHistory {
   @@index([clinicId])
   @@index([createdAt])
   @@map("queue_status_history")
+}
+
+/// Meta WhatsApp Business Account & Cloud API Integration per clinic
+model WhatsappIntegration {
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  clinicId             String    @unique @map("clinic_id")
+  phoneNumberId        String    @unique @map("phone_number_id")
+  wabaId               String    @map("waba_id")
+  businessPhoneNumber  String    @map("business_phone_number")
+  displayName          String?   @map("display_name")
+  accessTokenEncrypted String    @map("access_token_encrypted")
+  webhookVerifyToken   String    @map("webhook_verify_token")
+  status               String    @default("PENDING") // PENDING, CONNECTED, DISCONNECTED, ERROR
+  isWebhookVerified    Boolean   @default(false) @map("is_webhook_verified")
+  lastConnectedAt      DateTime? @map("last_connected_at")
+  metadata             Json?
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  templates    WhatsappMessageTemplate[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([phoneNumberId])
+  @@index([status])
+  @@map("whatsapp_integrations")
+}
+
+/// WhatsApp subscriber contacts mapped to patient records and consent tracking
+model WhatsappContact {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  clinicId         String    @map("clinic_id")
+  patientId        String?   @map("patient_id")
+  waId             String    @map("wa_id") // E.164 digits without leading +
+  profileName      String?   @map("profile_name")
+  consentStatus    String    @default("UNKNOWN") @map("consent_status") // UNKNOWN, OPTED_IN, OPTED_OUT
+  consentUpdatedAt DateTime? @map("consent_updated_at")
+  optOutReason     String?   @map("opt_out_reason")
+  lastInboundAt    DateTime? @map("last_inbound_at")
+  lastOutboundAt   DateTime? @map("last_outbound_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic        Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient       Patient?               @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  conversations WhatsappConversation[]
+  messages      WhatsappMessage[]
+
+  @@unique([clinicId, waId])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([waId])
+  @@index([consentStatus])
+  @@map("whatsapp_contacts")
+}
+
+/// Two-way WhatsApp chat session with 24-hr window and human receptionist handover
+model WhatsappConversation {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  clinicId              String    @map("clinic_id")
+  contactId             String    @map("contact_id")
+  assignedUserId        String?   @map("assigned_user_id")
+  status                String    @default("OPEN") // OPEN, HUMAN_HANDOVER, RESOLVED, CLOSED
+  handoverReason        String?   @map("handover_reason")
+  handoverAt            DateTime? @map("handover_at")
+  resolvedAt            DateTime? @map("resolved_at")
+  lastCustomerMessageAt DateTime? @map("last_customer_message_at")
+  lastMessagePreview    String?   @map("last_message_preview")
+  unreadCount           Int       @default(0) @map("unread_count")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  contact      WhatsappContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  assignedUser UserProfile?      @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  messages     WhatsappMessage[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([contactId])
+  @@index([assignedUserId])
+  @@index([status])
+  @@index([lastCustomerMessageAt])
+  @@map("whatsapp_conversations")
+}
+
+/// Individual WhatsApp inbound and outbound message with delivery status tracking
+model WhatsappMessage {
+  id                String    @id @default(uuid())
+  organizationId    String    @map("organization_id")
+  clinicId          String    @map("clinic_id")
+  conversationId    String    @map("conversation_id")
+  contactId         String    @map("contact_id")
+  providerMessageId String?   @unique @map("provider_message_id") // Meta wamid
+  direction         String    // INBOUND, OUTBOUND
+  messageType       String    @default("text") @map("message_type") // text, template, interactive, image, document
+  body              String?
+  rawPayload        Json?     @map("raw_payload")
+  templateName      String?   @map("template_name")
+  templateParams    Json?     @map("template_params")
+  status            String    @default("RECEIVED") // RECEIVED, QUEUED, SENT, DELIVERED, READ, FAILED
+  errorCode         String?   @map("error_code")
+  errorMessage      String?   @map("error_message")
+  sentAt            DateTime? @map("sent_at")
+  deliveredAt       DateTime? @map("delivered_at")
+  readAt            DateTime? @map("read_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  contact      WhatsappContact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([conversationId])
+  @@index([contactId])
+  @@index([providerMessageId])
+  @@index([direction])
+  @@index([status])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}
+
+/// Webhook event deduplication and processing audit ledger
+model WhatsappWebhookEvent {
+  id               String    @id @default(uuid())
+  eventId          String    @unique @map("event_id")
+  eventType        String    @map("event_type")
+  payload          Json
+  processingStatus String    @default("RECEIVED") @map("processing_status") // RECEIVED, PROCESSING, PROCESSED, FAILED
+  processedAt      DateTime? @map("processed_at")
+  errorMessage     String?   @map("error_message")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([eventId])
+  @@index([eventType])
+  @@index([processingStatus])
+  @@index([createdAt])
+  @@map("whatsapp_webhook_events")
+}
+
+/// Approved Meta WhatsApp message templates per clinic/integration
+model WhatsappMessageTemplate {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String   @map("clinic_id")
+  integrationId  String?  @map("integration_id")
+  name           String
+  language       String   @default("en_US")
+  category       String   @default("UTILITY") // UTILITY, MARKETING, AUTHENTICATION
+  status         String   @default("APPROVED") // PENDING, APPROVED, REJECTED, PAUSED
+  headerFormat   String?  @map("header_format")
+  bodyTemplate   String   @map("body_template")
+  footerTemplate String?  @map("footer_template")
+  parameterNames String[] @default([]) @map("parameter_names")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  integration  WhatsappIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@unique([clinicId, name, language])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([name])
+  @@index([status])
+  @@map("whatsapp_message_templates")
 }

@@ -19,7 +19,19 @@ import {
   ClinicQueueSession,
   QueueToken,
   PublicQueueDisplay,
+  WhatsappIntegration,
+  WhatsappContact,
+  WhatsappConversation,
+  WhatsappMessage,
+  WhatsappMessageTemplate,
+  WhatsAppConnectionHealth,
 } from '@matabai/shared';
+import {
+  CreateWhatsappIntegrationInput,
+  SendWhatsappTextMessageInput,
+  SendWhatsappTemplateMessageInput,
+  UpdateWhatsappConsentInput,
+} from '@matabai/validation';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
@@ -664,287 +676,79 @@ export class ApiClient {
     get: (publicQueueId: string) =>
       ApiClient.request<PublicQueueDisplay>(`/public/queues/${publicQueueId}`),
   };
+  // Phase 6 WhatsApp Business Cloud API Integration Endpoints
+  static whatsapp = {
+    getIntegration: (clinicId: string) =>
+      ApiClient.request<WhatsappIntegration | null>(`/whatsapp/integration?clinicId=${clinicId}`),
 
-  // Doctor Working Hours Endpoints
-  static workingHours = {
-    list: (doctorId: string, clinicId?: string) => {
-      const query = new URLSearchParams();
-      if (clinicId) query.set('clinicId', clinicId);
-      return ApiClient.request<DoctorWorkingHours[]>(`/doctors/${doctorId}/working-hours?${query.toString()}`);
-    },
-    create: (doctorId: string, data: {
-      clinicId: string;
-      dayOfWeek: number;
-      startTime: string;
-      endTime: string;
-      slotDurationMinutes?: number;
-      breakStartTime?: string | null;
-      breakEndTime?: string | null;
-      isActive?: boolean;
-    }) =>
-      ApiClient.request<DoctorWorkingHours>(`/doctors/${doctorId}/working-hours`, {
+    upsertIntegration: (data: CreateWhatsappIntegrationInput) =>
+      ApiClient.request<WhatsappIntegration>('/whatsapp/integration', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (doctorId: string, id: string, data: Partial<DoctorWorkingHours>) =>
-      ApiClient.request<DoctorWorkingHours>(`/doctors/${doctorId}/working-hours/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    delete: (doctorId: string, id: string) =>
-      ApiClient.request<{ success: boolean; message: string }>(`/doctors/${doctorId}/working-hours/${id}`, {
-        method: 'DELETE',
-      }),
-  };
 
-  // Doctor Schedule Exceptions Endpoints
-  static scheduleExceptions = {
-    list: (doctorId: string, clinicId?: string) => {
-      const query = new URLSearchParams();
-      if (clinicId) query.set('clinicId', clinicId);
-      return ApiClient.request<DoctorScheduleException[]>(`/doctors/${doctorId}/schedule-exceptions?${query.toString()}`);
-    },
-    create: (doctorId: string, data: {
-      clinicId: string;
-      exceptionDate: string;
-      exceptionType: string;
-      startTime?: string | null;
-      endTime?: string | null;
-      reason?: string | null;
-    }) =>
-      ApiClient.request<DoctorScheduleException>(`/doctors/${doctorId}/schedule-exceptions`, {
+    checkHealth: (clinicId: string) =>
+      ApiClient.request<WhatsAppConnectionHealth>(`/whatsapp/integration/health?clinicId=${clinicId}`),
+
+    getTemplates: (clinicId: string) =>
+      ApiClient.request<WhatsappMessageTemplate[]>(`/whatsapp/templates?clinicId=${clinicId}`),
+
+    sendTextMessage: (data: SendWhatsappTextMessageInput) =>
+      ApiClient.request<WhatsappMessage>('/whatsapp/send-text', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (doctorId: string, id: string, data: Partial<DoctorScheduleException>) =>
-      ApiClient.request<DoctorScheduleException>(`/doctors/${doctorId}/schedule-exceptions/${id}`, {
-        method: 'PATCH',
+
+    sendTemplateMessage: (data: SendWhatsappTemplateMessageInput) =>
+      ApiClient.request<WhatsappMessage>('/whatsapp/send-template', {
+        method: 'POST',
         body: JSON.stringify(data),
       }),
-    delete: (doctorId: string, id: string) =>
-      ApiClient.request<{ success: boolean; message: string }>(`/doctors/${doctorId}/schedule-exceptions/${id}`, {
-        method: 'DELETE',
-      }),
-  };
 
-  // Availability Endpoints
-  static availability = {
-    get: (params: { clinicId: string; doctorId: string; date: string }) => {
-      const query = new URLSearchParams();
-      query.set('clinicId', params.clinicId);
-      query.set('doctorId', params.doctorId);
-      query.set('date', params.date);
-      return ApiClient.request<AvailableSlot[]>(`/availability?${query.toString()}`);
-    },
-  };
-
-  // Appointments Endpoints
-  static appointments = {
-    list: (params?: {
+    listConversations: (params: {
+      clinicId: string;
+      status?: string;
+      search?: string;
       page?: number;
       limit?: number;
-      clinicId?: string;
-      doctorId?: string;
-      patientId?: string;
-      status?: string;
-      startDate?: string;
-      endDate?: string;
-      search?: string;
-      sortBy?: string;
-      sortOrder?: string;
     }) => {
       const query = new URLSearchParams();
-      if (params?.page) query.set('page', String(params.page));
-      if (params?.limit) query.set('limit', String(params.limit));
-      if (params?.clinicId) query.set('clinicId', params.clinicId);
-      if (params?.doctorId) query.set('doctorId', params.doctorId);
-      if (params?.patientId) query.set('patientId', params.patientId);
-      if (params?.status) query.set('status', params.status);
-      if (params?.startDate) query.set('startDate', params.startDate);
-      if (params?.endDate) query.set('endDate', params.endDate);
-      if (params?.search) query.set('search', params.search);
-      if (params?.sortBy) query.set('sortBy', params.sortBy);
-      if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
-      return ApiClient.request<PaginatedResult<Appointment>>(`/appointments?${query.toString()}`);
+      query.set('clinicId', params.clinicId);
+      if (params.status) query.set('status', params.status);
+      if (params.search) query.set('search', params.search);
+      if (params.page) query.set('page', String(params.page));
+      if (params.limit) query.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<WhatsappConversation>>(`/whatsapp/conversations?${query.toString()}`);
     },
-    get: (id: string) => ApiClient.request<Appointment>(`/appointments/${id}`),
-    create: (data: {
-      clinicId: string;
-      doctorId: string;
-      patientId: string;
-      appointmentDate: string;
-      startTime: string;
-      endTime: string;
-      bookingSource?: string;
-      reasonForVisit?: string | null;
-      internalNotes?: string | null;
-    }) =>
-      ApiClient.request<Appointment>('/appointments', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    reschedule: (id: string, data: {
-      appointmentDate: string;
-      startTime: string;
-      endTime: string;
-      reason?: string | null;
-    }) =>
-      ApiClient.request<Appointment>(`/appointments/${id}/reschedule`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    cancel: (id: string, data: { reason: string }) =>
-      ApiClient.request<{ success: boolean; message: string; appointment: Appointment }>(
-        `/appointments/${id}/cancel`,
-        {
-          method: 'POST',
-          body: JSON.stringify(data),
-        },
-      ),
-    updateStatus: (id: string, data: { status: string; reason?: string | null }) =>
-      ApiClient.request<Appointment>(`/appointments/${id}/status`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-  };
 
-  // Phase 5 Queue Settings
-  static queueSettings = {
-    list: (params?: { clinicId?: string }) => {
-      const q = new URLSearchParams();
-      if (params?.clinicId) q.append('clinicId', params.clinicId);
-      return ApiClient.request<ClinicQueueSettings[]>(`/queue/settings?${q.toString()}`);
-    },
-    get: (id: string) => ApiClient.request<ClinicQueueSettings>(`/queue/settings/${id}`),
-    create: (data: Partial<ClinicQueueSettings>) =>
-      ApiClient.request<ClinicQueueSettings>('/queue/settings', {
+    getConversation: (id: string) =>
+      ApiClient.request<WhatsappConversation>(`/whatsapp/conversations/${id}`),
+
+    replyConversation: (id: string, message: string) =>
+      ApiClient.request<WhatsappMessage>(`/whatsapp/conversations/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message }),
+      }),
+
+    claimConversation: (id: string) =>
+      ApiClient.request<WhatsappConversation>(`/whatsapp/conversations/${id}/claim`, {
+        method: 'POST',
+      }),
+
+    resolveConversation: (id: string) =>
+      ApiClient.request<WhatsappConversation>(`/whatsapp/conversations/${id}/resolve`, {
+        method: 'POST',
+      }),
+
+    reopenConversation: (id: string) =>
+      ApiClient.request<WhatsappConversation>(`/whatsapp/conversations/${id}/reopen`, {
+        method: 'POST',
+      }),
+
+    updateConsent: (contactId: string, data: UpdateWhatsappConsentInput) =>
+      ApiClient.request<WhatsappContact>(`/whatsapp/contacts/${contactId}/consent`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (id: string, data: Partial<ClinicQueueSettings>) =>
-      ApiClient.request<ClinicQueueSettings>(`/queue/settings/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    regeneratePublicKey: (id: string) =>
-      ApiClient.request<{ publicQueueId: string }>(`/queue/settings/${id}/regenerate-public-key`, {
-        method: 'POST',
-      }),
-  };
-
-  // Phase 5 Queue Sessions
-  static queueSessions = {
-    list: (params?: { clinicId?: string; doctorId?: string; sessionDate?: string; status?: string }) => {
-      const q = new URLSearchParams();
-      if (params?.clinicId) q.append('clinicId', params.clinicId);
-      if (params?.doctorId) q.append('doctorId', params.doctorId);
-      if (params?.sessionDate) q.append('sessionDate', params.sessionDate);
-      if (params?.status) q.append('status', params.status);
-      return ApiClient.request<PaginatedResult<ClinicQueueSession>>(`/queue/sessions?${q.toString()}`);
-    },
-    get: (id: string) =>
-      ApiClient.request<ClinicQueueSession & {
-        stats: {
-          waitingCount: number;
-          servingCount: number;
-          completedCount: number;
-          skippedCount: number;
-          cancelledCount: number;
-          totalRegistered: number;
-        };
-        activeCalledToken: QueueToken | null;
-        activeServingToken: QueueToken | null;
-      }>(`/queue/sessions/${id}`),
-    create: (data: { clinicId: string; queueSettingsId: string; doctorId?: string; sessionDate?: string }) =>
-      ApiClient.request<ClinicQueueSession>('/queue/sessions', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    start: (id: string) =>
-      ApiClient.request<ClinicQueueSession>(`/queue/sessions/${id}/start`, { method: 'POST' }),
-    pause: (id: string) =>
-      ApiClient.request<ClinicQueueSession>(`/queue/sessions/${id}/pause`, { method: 'POST' }),
-    resume: (id: string) =>
-      ApiClient.request<ClinicQueueSession>(`/queue/sessions/${id}/resume`, { method: 'POST' }),
-    close: (id: string, force = false) =>
-      ApiClient.request<ClinicQueueSession>(`/queue/sessions/${id}/close`, {
-        method: 'POST',
-        body: JSON.stringify({ force }),
-      }),
-  };
-
-  // Phase 5 Queue Tokens & Operations
-  static queueTokens = {
-    checkInAppointment: (appointmentId: string) =>
-      ApiClient.request<QueueToken>('/queue/check-in/appointment', {
-        method: 'POST',
-        body: JSON.stringify({ appointmentId }),
-      }),
-    checkInWalkIn: (data: {
-      clinicId: string;
-      patientId: string;
-      queueSessionId?: string;
-      queueSettingsId?: string;
-      notes?: string;
-      priorityType?: string;
-    }) =>
-      ApiClient.request<QueueToken>('/queue/check-in/walk-in', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    list: (params?: { clinicId?: string; queueSessionId?: string; status?: string; search?: string }) => {
-      const q = new URLSearchParams();
-      if (params?.clinicId) q.append('clinicId', params.clinicId);
-      if (params?.queueSessionId) q.append('queueSessionId', params.queueSessionId);
-      if (params?.status) q.append('status', params.status);
-      if (params?.search) q.append('search', params.search);
-      return ApiClient.request<PaginatedResult<QueueToken>>(`/queue/tokens?${q.toString()}`);
-    },
-    get: (id: string) => ApiClient.request<QueueToken>(`/queue/tokens/${id}`),
-    callNext: (sessionId: string) =>
-      ApiClient.request<QueueToken>(`/queue/sessions/${sessionId}/call-next`, { method: 'POST' }),
-    recall: (id: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/recall`, { method: 'POST' }),
-    startServing: (id: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/start-serving`, { method: 'POST' }),
-    complete: (id: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/complete`, { method: 'POST' }),
-    skip: (id: string, reason?: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/skip`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      }),
-    restore: (id: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/restore`, { method: 'POST' }),
-    noShow: (id: string, reason?: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/no-show`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      }),
-    cancel: (id: string, reason?: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/cancel`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      }),
-    setPriority: (id: string, priorityType: string, reason?: string) =>
-      ApiClient.request<QueueToken>(`/queue/tokens/${id}/priority`, {
-        method: 'POST',
-        body: JSON.stringify({ priorityType, reason }),
-      }),
-  };
-
-  // Phase 5 Patient Tokens
-  static patientTokens = {
-    list: () => ApiClient.request<{ data: QueueToken[] }>('/patient/tokens'),
-    get: (id: string) =>
-      ApiClient.request<QueueToken & { currentActiveToken?: any; patientsAhead: number }>(
-        `/patient/tokens/${id}`,
-      ),
-  };
-
-  // Phase 5 Public Queue
-  static publicQueue = {
-    get: (publicQueueId: string) =>
-      ApiClient.request<PublicQueueDisplay>(`/public/queues/${publicQueueId}`),
   };
 }

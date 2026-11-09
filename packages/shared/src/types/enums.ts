@@ -177,6 +177,11 @@ export const PERMISSIONS = {
 
   // Audit Logs
   AUDIT_READ: 'audit:read',
+
+  // WhatsApp & Conversations
+  CONVERSATION_READ: 'conversation:read',
+  CONVERSATION_WRITE: 'conversation:write',
+  WHATSAPP_MANAGE: 'whatsapp:manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -200,6 +205,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.LAB_READ,
     PERMISSIONS.REPORT_READ,
     PERMISSIONS.AUDIT_READ,
+    PERMISSIONS.CONVERSATION_READ,
+    PERMISSIONS.CONVERSATION_WRITE,
+    PERMISSIONS.WHATSAPP_MANAGE,
   ],
   [UserRole.DOCTOR]: [
     PERMISSIONS.CLINIC_READ,
@@ -213,6 +221,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.LAB_READ,
     PERMISSIONS.LAB_WRITE,
     PERMISSIONS.REPORT_READ,
+    PERMISSIONS.CONVERSATION_READ,
   ],
   [UserRole.RECEPTIONIST]: [
     PERMISSIONS.CLINIC_READ,
@@ -223,6 +232,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.APPOINTMENT_WRITE,
     PERMISSIONS.QUEUE_READ,
     PERMISSIONS.QUEUE_MANAGE,
+    PERMISSIONS.CONVERSATION_READ,
+    PERMISSIONS.CONVERSATION_WRITE,
   ],
   [UserRole.LAB_STAFF]: [
     PERMISSIONS.CLINIC_READ,
@@ -236,3 +247,57 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.QUEUE_READ,
   ],
 };
+
+export enum WhatsAppConnectionStatus {
+  PENDING = 'PENDING',
+  CONNECTED = 'CONNECTED',
+  DISCONNECTED = 'DISCONNECTED',
+  ERROR = 'ERROR',
+}
+
+export enum WhatsAppConsentStatus {
+  UNKNOWN = 'UNKNOWN',
+  OPTED_IN = 'OPTED_IN',
+  OPTED_OUT = 'OPTED_OUT',
+}
+
+export enum WhatsAppConversationStatus {
+  OPEN = 'OPEN',
+  HUMAN_HANDOVER = 'HUMAN_HANDOVER',
+  RESOLVED = 'RESOLVED',
+  CLOSED = 'CLOSED',
+}
+
+export enum WhatsAppMessageDirection {
+  INBOUND = 'INBOUND',
+  OUTBOUND = 'OUTBOUND',
+}
+
+export enum WhatsAppDeliveryStatus {
+  RECEIVED = 'RECEIVED',
+  QUEUED = 'QUEUED',
+  SENT = 'SENT',
+  DELIVERED = 'DELIVERED',
+  READ = 'READ',
+  FAILED = 'FAILED',
+}
+
+export enum WhatsAppWebhookStatus {
+  RECEIVED = 'RECEIVED',
+  PROCESSING = 'PROCESSING',
+  PROCESSED = 'PROCESSED',
+  FAILED = 'FAILED',
+}
+
+export enum WhatsAppTemplateStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  PAUSED = 'PAUSED',
+}
+
+export enum WhatsAppTemplateCategory {
+  UTILITY = 'UTILITY',
+  MARKETING = 'MARKETING',
+  AUTHENTICATION = 'AUTHENTICATION',
+}

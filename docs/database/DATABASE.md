@@ -254,3 +254,132 @@ ALTER TABLE queue_status_history ENABLE ROW LEVEL SECURITY;
 - Staff can only access queues within their assigned organization.
 - Patients can only view their own tokens (`patient_id = current_user_patient_id`).
 - Public waiting room displays access only minimal sanitized data via high-entropy `public_queue_id` without exposing private patient records.
+
+---
+
+# Phase 6: WhatsApp Business Cloud API Integration Schema
+
+## 1. `whatsapp_integrations`
+Stores Meta WhatsApp Business Account (WABA) credentials and webhook configuration per clinic branch.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Unique, FK -> `clinics(id)` | Clinic branch |
+| `phone_number_id` | `VARCHAR(50)` | Unique, NOT NULL | Meta Phone Number ID |
+| `waba_id` | `VARCHAR(50)` | NOT NULL | WhatsApp Business Account ID |
+| `business_phone_number` | `VARCHAR(20)` | NOT NULL | Normalized E.164 phone |
+| `display_name` | `VARCHAR(100)` | Nullable | Verified display name |
+| `access_token_encrypted` | `TEXT` | NOT NULL | AES-256 encrypted permanent token |
+| `webhook_verify_token` | `VARCHAR(128)` | NOT NULL | Handshake verification token |
+| `status` | `VARCHAR(20)` | Default `PENDING` | `PENDING`, `CONNECTED`, `DISCONNECTED`, `ERROR` |
+| `is_webhook_verified` | `BOOLEAN` | Default `false` | Webhook verification status |
+| `last_connected_at` | `TIMESTAMPTZ` | Nullable | Last successful ping / webhook |
+| `metadata` | `JSONB` | Nullable | Phone number quality, display details |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+## 2. `whatsapp_contacts`
+Patient subscribers, E.164 phone mapping, and explicit opt-in / opt-out consent tracking.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `patient_id` | `UUID` | Nullable, FK -> `patients(id)` | Linked outpatient record |
+| `wa_id` | `VARCHAR(20)` | NOT NULL | E.164 normalized digits (no +) |
+| `profile_name` | `VARCHAR(100)` | Nullable | WhatsApp profile display name |
+| `consent_status` | `VARCHAR(20)` | Default `UNKNOWN` | `UNKNOWN`, `OPTED_IN`, `OPTED_OUT` |
+| `consent_updated_at` | `TIMESTAMPTZ` | Nullable | When opt-in/opt-out changed |
+| `opt_out_reason` | `TEXT` | Nullable | Keyword / staff reason |
+| `last_inbound_at` | `TIMESTAMPTZ` | Nullable | Last inbound message timestamp |
+| `last_outbound_at` | `TIMESTAMPTZ` | Nullable | Last outbound message timestamp |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+Unique Constraint: `[clinic_id, wa_id]`.
+
+## 3. `whatsapp_conversations`
+Active conversation sessions, 24-hour customer service window tracking, and receptionist human handover.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `contact_id` | `UUID` | FK -> `whatsapp_contacts(id)` | Subscriber contact |
+| `assigned_user_id` | `UUID` | Nullable, FK -> `user_profiles(id)` | Claiming staff receptionist |
+| `status` | `VARCHAR(20)` | Default `OPEN` | `OPEN`, `HUMAN_HANDOVER`, `RESOLVED`, `CLOSED` |
+| `handover_reason` | `TEXT` | Nullable | Triage keyword or receptionist note |
+| `handover_at` | `TIMESTAMPTZ` | Nullable | Timestamp when handover requested |
+| `resolved_at` | `TIMESTAMPTZ` | Nullable | Timestamp when marked resolved |
+| `last_customer_message_at` | `TIMESTAMPTZ` | Nullable | Customer inbound timestamp for 24-hr window calculation |
+| `last_message_preview` | `VARCHAR(255)` | Nullable | Preview of last message |
+| `unread_count` | `INT` | Default `0` | Unread incoming messages |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+## 4. `whatsapp_messages`
+Inbound and outbound message ledger with provider tracking and delivery statuses.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `conversation_id` | `UUID` | FK -> `whatsapp_conversations(id)` | Thread session |
+| `contact_id` | `UUID` | FK -> `whatsapp_contacts(id)` | Contact record |
+| `provider_message_id` | `VARCHAR(100)` | Unique, Nullable | Meta `wamid.HBgL...` |
+| `direction` | `VARCHAR(10)` | NOT NULL | `INBOUND`, `OUTBOUND` |
+| `message_type` | `VARCHAR(20)` | Default `text` | `text`, `template`, `interactive`, etc. |
+| `body` | `TEXT` | Nullable | Message body text or caption |
+| `raw_payload` | `JSONB` | Nullable | Full Meta JSON webhook payload |
+| `template_name` | `VARCHAR(100)` | Nullable | Approved template identifier |
+| `template_params` | `JSONB` | Nullable | Dynamic parameter substitutions |
+| `status` | `VARCHAR(20)` | Default `RECEIVED` | `RECEIVED`, `QUEUED`, `SENT`, `DELIVERED`, `READ`, `FAILED` |
+| `error_code` | `VARCHAR(50)` | Nullable | Meta error code |
+| `error_message` | `TEXT` | Nullable | Sanitized error description |
+| `sent_at` | `TIMESTAMPTZ` | Nullable | Outbound dispatch timestamp |
+| `delivered_at` | `TIMESTAMPTZ` | Nullable | Delivery receipt timestamp |
+| `read_at` | `TIMESTAMPTZ` | Nullable | Read receipt timestamp |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+## 5. `whatsapp_webhook_events`
+Deduplication ledger ensuring idempotent webhook processing.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `event_id` | `VARCHAR(128)` | Unique, NOT NULL | Deduplication key |
+| `event_type` | `VARCHAR(50)` | NOT NULL | `messages`, `statuses` |
+| `payload` | `JSONB` | NOT NULL | Webhook event payload |
+| `processing_status` | `VARCHAR(20)` | Default `RECEIVED` | `RECEIVED`, `PROCESSING`, `PROCESSED`, `FAILED` |
+| `processed_at` | `TIMESTAMPTZ` | Nullable | Completion timestamp |
+| `error_message` | `TEXT` | Nullable | Failure reason if failed |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Ingestion timestamp |
+
+## 6. `whatsapp_message_templates`
+Registered pre-approved Meta WhatsApp templates for notifications outside the 24-hour customer window.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `integration_id` | `UUID` | Nullable, FK -> `whatsapp_integrations(id)` | Linked Meta integration |
+| `name` | `VARCHAR(100)` | NOT NULL | Template name e.g. `appointment_confirmation` |
+| `language` | `VARCHAR(10)` | Default `en_US` | Language code |
+| `category` | `VARCHAR(30)` | Default `UTILITY` | `UTILITY`, `MARKETING`, `AUTHENTICATION` |
+| `status` | `VARCHAR(20)` | Default `APPROVED` | `PENDING`, `APPROVED`, `REJECTED`, `PAUSED` |
+| `header_format` | `VARCHAR(20)` | Nullable | `TEXT`, `IMAGE`, `DOCUMENT` |
+| `body_template` | `TEXT` | NOT NULL | Body with `{{1}}`, `{{2}}` placeholders |
+| `footer_template` | `TEXT` | Nullable | Footer disclaimer text |
+| `parameter_names` | `TEXT[]` | Default `{}` | Semantic placeholder names |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+Unique Constraint: `[clinic_id, name, language]`.
+

@@ -331,5 +331,125 @@ export interface QueueStats {
   averageWaitMinutes: number;
 }
 
+export interface WhatsappIntegration {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  phoneNumberId: string;
+  wabaId: string;
+  businessPhoneNumber: string;
+  displayName?: string | null;
+  status: string; // PENDING, CONNECTED, DISCONNECTED, ERROR
+  isWebhookVerified: boolean;
+  lastConnectedAt?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  clinic?: Clinic;
+  organization?: Organization;
+}
+
+export interface WhatsappContact {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId?: string | null;
+  waId: string;
+  profileName?: string | null;
+  consentStatus: string; // UNKNOWN, OPTED_IN, OPTED_OUT
+  consentUpdatedAt?: string | null;
+  optOutReason?: string | null;
+  lastInboundAt?: string | null;
+  lastOutboundAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient | null;
+}
+
+export interface WhatsappConversation {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  contactId: string;
+  assignedUserId?: string | null;
+  status: string; // OPEN, HUMAN_HANDOVER, RESOLVED, CLOSED
+  handoverReason?: string | null;
+  handoverAt?: string | null;
+  resolvedAt?: string | null;
+  lastCustomerMessageAt?: string | null;
+  lastMessagePreview?: string | null;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+  contact?: WhatsappContact;
+  assignedUser?: UserProfile | null;
+  messages?: WhatsappMessage[];
+}
+
+export interface WhatsappMessage {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  conversationId: string;
+  contactId: string;
+  providerMessageId?: string | null;
+  direction: string; // INBOUND, OUTBOUND
+  messageType: string;
+  body?: string | null;
+  rawPayload?: Record<string, unknown> | null;
+  templateName?: string | null;
+  templateParams?: Record<string, unknown> | null;
+  status: string; // RECEIVED, QUEUED, SENT, DELIVERED, READ, FAILED
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsappWebhookEvent {
+  id: string;
+  eventId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  processingStatus: string;
+  processedAt?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
+export interface WhatsappMessageTemplate {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  integrationId?: string | null;
+  name: string;
+  language: string;
+  category: string;
+  status: string;
+  headerFormat?: string | null;
+  bodyTemplate: string;
+  footerTemplate?: string | null;
+  parameterNames: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppConnectionHealth {
+  configured: boolean;
+  connected: boolean;
+  phoneNumberId?: string;
+  wabaId?: string;
+  businessPhoneNumber?: string;
+  verifiedName?: string | null;
+  qualityRating?: string | null;
+  webhookVerified: boolean;
+  status: string;
+  error?: string | null;
+  lastCheckedAt: string;
+}
+
 
 

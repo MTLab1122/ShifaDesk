@@ -2,7 +2,7 @@
 
 Founder: **Muhammad Talha**  
 Project: **MatabAI (ShifaDesk)**  
-Current Status: **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 & Phase 5 Verified & Complete**
+Current Status: **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5 & Phase 6 Verified & Complete**
 
 ---
 
@@ -15,9 +15,78 @@ Current Status: **Phase 0, Phase 1, Phase 2, Phase 3, Phase 4 & Phase 5 Verified
 | **2** | **Backend Modular Monolith, Database, Auth & Tenant Isolation** | **VERIFIED** | Real PostgreSQL/Supabase schema, Prisma ORM, 5-role RBAC, TenantGuard, Supabase JWT verification, REST endpoints, audit logs. Committed (`c72c044`). |
 | **3** | **Clinic, Doctor, Staff & Patient Management** | **VERIFIED** | Real database persistence, multi-tenant RLS, strict RBAC, registration number privacy masking, MRN generation, duplicate prevention, 4 full dashboard interfaces, 44 backend unit tests (100% passing). Committed (`749d0b2`). |
 | **4** | **Appointment Scheduling & Booking Engine** | **VERIFIED** | Real database persistence, doctor weekly working hours, schedule exceptions/leaves, dynamic timezone slot generation, double-booking prevention under concurrency, state machine transitions, guided booking wizards, calendar/table views, 68 backend tests (100% passing). Committed (`6111058`). |
-| **5** | **Digital Token & Real-Time Queue Management** | **VERIFIED** | Real database persistence, atomic token generation, appointment & walk-in check-in, deterministic queue ordering (priority + FIFO), doctor & receptionist calling controls, real-time events, public TV monitor display, patient live queue tracker, 87 backend tests (100% passing). |
-| **6** | **Multilingual WhatsApp & AI Conversational Triage Intake** | ⏸️ NEXT | Founder sign-off of Phase 5 deliverables. |
-| **7** | **Diagnostic Laboratory, Pathology & Financial Analytics** | ⏸️ QUEUED | Completion of Phase 6. |
+| **5** | **Digital Token & Real-Time Queue Management** | **VERIFIED** | Real database persistence, atomic token generation, appointment & walk-in check-in, deterministic queue ordering (priority + FIFO), doctor & receptionist calling controls, real-time events, public TV monitor display, patient live queue tracker, 87 backend tests (100% passing). Committed (`9b37bd6`). |
+| **6** | **WhatsApp Business Cloud API Integration** | **VERIFIED** | Official Meta Graph API v21.0 client, secure webhook verification (HMAC-SHA256 timing-safe), event deduplication, 24-hr service window enforcement, opt-in/opt-out consent tracking, human receptionist handover, appointment/queue notifications, 117 tests passing (100%). |
+| **7** | **AI Conversational Triage & Multilingual LLM Intake** | ⏸️ NEXT | Founder sign-off of Phase 6 deliverables. |
+| **8** | **Diagnostic Laboratory, Pathology & Financial Analytics** | ⏸️ QUEUED | Completion of Phase 7. |
+
+---
+
+## 📋 Phase 6 Execution Checklist (Complete & Verified)
+
+### Database & Security
+- [x] Prisma models: `WhatsappIntegration`, `WhatsappContact`, `WhatsappConversation`, `WhatsappMessage`, `WhatsappWebhookEvent`, `WhatsappMessageTemplate`
+- [x] Multi-tenant RLS policies for all 6 WhatsApp tables in `infrastructure/database/rls-policies.sql`
+- [x] Generated Prisma Client v6.19.3 (`pnpm run db:generate`)
+- [x] AES-256 encrypted permanent token storage (`access_token_encrypted`)
+- [x] Webhook signature verification: HMAC-SHA256 with `crypto.timingSafeEqual` against `X-Hub-Signature-256`
+- [x] Webhook event deduplication ledger preventing replay attacks and duplicate processing
+- [x] Patient privacy: Zero diagnostic reports or clinical notes sent over WhatsApp
+
+### Shared Packages & Validation
+- [x] `@matabai/shared`: Enums (`WhatsAppConnectionStatus`, `WhatsAppConsentStatus`, `WhatsAppConversationStatus`, `WhatsAppMessageDirection`, `WhatsAppDeliveryStatus`, `WhatsAppWebhookStatus`, `WhatsAppTemplateStatus`, `WhatsAppTemplateCategory`), permissions (`CONVERSATION_READ`, `CONVERSATION_WRITE`, `WHATSAPP_MANAGE`), and entity interfaces
+- [x] `@matabai/validation`: Zod schemas for integration settings, outbound text, outbound template, conversation status, receptionist claiming, and consent management
+- [x] `pnpm run build:packages` passed cleanly with 0 errors
+
+### Backend Modular Monolith
+- [x] `MetaApiClient`: Official Meta Graph API v21.0 client with retry backoff for 429/5xx, timeouts, and sanitized error logging
+- [x] `WhatsAppWebhookController`:
+  - `GET /api/v1/webhooks/whatsapp` (hub.challenge handshake)
+  - `POST /api/v1/webhooks/whatsapp` (HMAC-SHA256 verification, deduplication, 200 OK contract)
+- [x] `WhatsAppInboundService`:
+  - E.164 phone normalization, contact record creation, auto-patient linking
+  - Keyword opt-out detection (`STOP`, `UNSUBSCRIBE`, etc.) -> `OPTED_OUT`
+  - Keyword opt-in detection (`START`, `YES`, etc.) -> `OPTED_IN`
+  - Keyword handover detection (`HUMAN`, `AGENT`, etc.) -> `HUMAN_HANDOVER`
+  - Status updates processing (`sent`, `delivered`, `read`, `failed`)
+- [x] `WhatsAppOutboundService`:
+  - 24-hour customer service window enforcement (rejects free text after 24 hrs)
+  - Approved template messaging permitted outside 24-hr window
+  - Recipient opt-out policy enforcement
+- [x] `WhatsAppConversationService` & `WhatsAppConversationController`:
+  - List conversations with filters and pagination
+  - Message thread retrieval
+  - Receptionist claiming, resolve, reopen workflows
+  - Manual consent updates
+- [x] `WhatsAppIntegrationService` & `WhatsAppIntegrationController`:
+  - Integration configuration and token encryption
+  - Live health check endpoint against Meta Graph API
+  - Pre-approved healthcare template management
+- [x] `WhatsAppNotificationService`:
+  - Appointment confirmation trigger
+  - Queue token called trigger
+  - Queue delay notice broadcast trigger
+
+### Frontend Integration
+- [x] `ApiClient.whatsapp`: Full typed API client in `apps/web/lib/api-client.ts`
+- [x] Connected `/dashboard/conversations`:
+  - Live Meta Cloud API connection health badge
+  - Real-time conversation listing with "Handover (Priority)", "Open", and "Resolved" tabs
+  - 24-hour service window indicator (active vs expired)
+  - Message thread with delivery receipts (`SENT`, `DELIVERED`, `READ`, `FAILED`)
+  - Dynamic composer: free-text in window, template picker outside window
+  - Receptionist claiming, resolving, and reopening actions
+  - Interactive patient opt-in / opt-out consent toggle
+
+### Verification & Automated Testing
+- [x] `webhook.spec.ts`: Webhook verification challenge, signature security, deduplication
+- [x] `outbound.spec.ts`: 24-hr window enforcement, template messaging, opt-out policy
+- [x] `handover.spec.ts`: Inbound keyword trigger, receptionist claim, resolve, reopen, consent
+- [x] `notification.spec.ts`: Appointment and queue lifecycle triggers
+- [x] 117 tests passing across monorepo (113 backend + 4 web) with 100% pass rate
+- [x] `pnpm run typecheck` passed with 0 errors
+- [x] `pnpm run lint` passed with 0 errors
+- [x] `pnpm run build` passed with 0 errors (all packages, NestJS API, and Next.js 29 routes)
 
 ---
 
