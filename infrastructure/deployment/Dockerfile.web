@@ -1,0 +1,36 @@
+# ==============================================================================
+# Production Dockerfile for MatabAI Next.js Web Application
+# ==============================================================================
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+FROM base AS builder
+WORKDIR /app
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml tsconfig.base.json .npmrc ./
+COPY packages/ ./packages/
+COPY apps/web/ ./apps/web/
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @matabai/shared build
+RUN pnpm --filter @matabai/config build
+RUN pnpm --filter @matabai/validation build
+RUN pnpm --filter @matabai/web build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Security: non-root user
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+USER nextjs
+
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+CMD ["pnpm", "--filter", "@matabai/web", "start"]

@@ -1,0 +1,20 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/// Foundational system connectivity check table
+/// Used for verifying database connectivity, connection pooling, and migrations
+model SystemHealthCheck {
+  id        String   @id @default(uuid())
+  checkKey  String   @unique @map("check_key")
+  status    String   @default("ok")
+  checkedAt DateTime @default(now()) @updatedAt @map("checked_at")
+
+  @@map("system_health_checks")
+}

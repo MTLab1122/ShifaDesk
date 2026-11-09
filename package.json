@@ -1,0 +1,50 @@
+{
+  "name": "matabai-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MatabAI (ShifaDesk) - Multilingual AI-Powered Clinic Operations SaaS Monorepo",
+  "author": "Muhammad Talha",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@12.16.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "@scarf/scarf",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:web": "pnpm --filter @matabai/web dev",
+    "dev:api": "pnpm --filter @matabai/api dev",
+    "build": "pnpm --filter \"./packages/*\" build && pnpm --filter \"./apps/*\" build",
+    "build:packages": "pnpm --filter \"./packages/*\" build",
+    "build:web": "pnpm --filter @matabai/web build",
+    "build:api": "pnpm --filter @matabai/api build",
+    "lint": "pnpm --recursive run lint",
+    "lint:fix": "pnpm --recursive run lint:fix",
+    "typecheck": "pnpm --recursive run typecheck",
+    "test": "pnpm --recursive run test",
+    "test:watch": "pnpm --recursive run test:watch",
+    "test:coverage": "pnpm --recursive run test:coverage",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "clean": "pnpm --recursive run clean",
+    "db:generate": "pnpm --filter @matabai/api db:generate"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
+    "eslint": "^10.14.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  }
+}

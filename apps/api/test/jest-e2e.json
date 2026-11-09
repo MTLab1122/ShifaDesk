@@ -1,0 +1,14 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "testEnvironment": "node",
+  "moduleNameMapper": {
+    "^@matabai/shared$": "<rootDir>/../../../packages/shared/dist",
+    "^@matabai/validation$": "<rootDir>/../../../packages/validation/dist",
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  }
+}

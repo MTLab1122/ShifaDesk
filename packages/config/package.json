@@ -1,0 +1,26 @@
+{
+  "name": "@matabai/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared configurations for MatabAI",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./tailwind": "./src/tailwind.js",
+    "./eslint": "./src/eslint.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rimraf dist *.tsbuildinfo",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "rimraf": "^6.0.1"
+  }
+}
