@@ -600,6 +600,125 @@ CREATE POLICY "whatsapp_templates_write" ON whatsapp_message_templates
     )
   );
 
+-- ==============================================================================
+-- 10. Phase 7: AI-Powered Multilingual Receptionist RLS Policies
+-- ==============================================================================
+
+ALTER TABLE ai_assistant_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_conversation_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_interaction_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinic_faqs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_tool_execution_logs ENABLE ROW LEVEL SECURITY;
+
+-- AI Assistant Settings
+CREATE POLICY "ai_settings_select" ON ai_assistant_settings
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = ai_assistant_settings.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "ai_settings_write" ON ai_assistant_settings
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = ai_assistant_settings.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- AI Conversation States
+CREATE POLICY "ai_states_select" ON ai_conversation_states
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = ai_conversation_states.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "ai_states_write" ON ai_conversation_states
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = ai_conversation_states.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- AI Interaction Logs
+CREATE POLICY "ai_interactions_select" ON ai_interaction_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = ai_interaction_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Clinic FAQs
+CREATE POLICY "clinic_faqs_select" ON clinic_faqs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinic_faqs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "clinic_faqs_write" ON clinic_faqs
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinic_faqs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- AI Tool Execution Logs
+CREATE POLICY "ai_tools_select" ON ai_tool_execution_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = ai_tool_execution_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+
 
 
 

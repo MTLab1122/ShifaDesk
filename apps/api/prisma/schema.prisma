@@ -47,6 +47,11 @@ model Organization {
   whatsappConversations     WhatsappConversation[]
   whatsappMessages          WhatsappMessage[]
   whatsappMessageTemplates  WhatsappMessageTemplate[]
+  aiAssistantSettings       AiAssistantSettings[]
+  aiConversationStates      AiConversationState[]
+  aiInteractionLogs         AiInteractionLog[]
+  clinicFaqs                ClinicFaq[]
+  aiToolExecutionLogs       AiToolExecutionLog[]
 
   @@index([slug])
   @@index([status])
@@ -87,6 +92,11 @@ model Clinic {
   whatsappConversations      WhatsappConversation[]
   whatsappMessages           WhatsappMessage[]
   whatsappMessageTemplates   WhatsappMessageTemplate[]
+  aiAssistantSettings        AiAssistantSettings?
+  aiConversationStates       AiConversationState[]
+  aiInteractionLogs          AiInteractionLog[]
+  clinicFaqs                 ClinicFaq[]
+  aiToolExecutionLogs        AiToolExecutionLog[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -630,6 +640,9 @@ model WhatsappConversation {
   contact      WhatsappContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   assignedUser UserProfile?      @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
   messages     WhatsappMessage[]
+  aiState      AiConversationState?
+  aiInteractionLogs AiInteractionLog[]
+  aiToolExecutionLogs AiToolExecutionLog[]
 
   @@index([organizationId])
   @@index([clinicId])
@@ -724,4 +737,144 @@ model WhatsappMessageTemplate {
   @@index([name])
   @@index([status])
   @@map("whatsapp_message_templates")
+}
+
+/// Configuration for the AI Multilingual Receptionist per organization/clinic
+model AiAssistantSettings {
+  id                        String   @id @default(uuid())
+  organizationId            String   @map("organization_id")
+  clinicId                  String?  @unique @map("clinic_id")
+  assistantName             String   @default("ShifaDesk Assistant") @map("assistant_name")
+  enabled                   Boolean  @default(true)
+  defaultLanguage           String   @default("EN") @map("default_language") // EN, UR, PS
+  supportedLanguages        String[] @default(["EN", "UR", "PS"]) @map("supported_languages")
+  greetingMessage           String   @default("Hello! I am your clinic virtual receptionist. How can I assist you today?") @map("greeting_message")
+  fallbackMessage           String   @default("I could not fully understand your request. Let me connect you with our human receptionist.") @map("fallback_message")
+  humanHandoverEnabled      Boolean  @default(true) @map("human_handover_enabled")
+  appointmentBookingEnabled Boolean  @default(true) @map("appointment_booking_enabled")
+  tokenLookupEnabled        Boolean  @default(true) @map("token_lookup_enabled")
+  clinicFaqEnabled          Boolean  @default(true) @map("clinic_faq_enabled")
+  maxTurnsPerConversation   Int      @default(20) @map("max_turns_per_conversation")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@map("ai_assistant_settings")
+}
+
+/// Conversational context, booking workflow state, and active multi-turn steps
+model AiConversationState {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  clinicId               String?   @map("clinic_id")
+  conversationId         String    @unique @map("conversation_id")
+  detectedLanguage       String    @default("en") @map("detected_language")
+  currentIntent          String?   @map("current_intent")
+  currentStep            String?   @map("current_step")
+  conversationContext    Json      @default("{}") @map("conversation_context")
+  handoverRequired       Boolean   @default(false) @map("handover_required")
+  lastProcessedMessageId String?   @map("last_processed_message_id")
+  lastActivityAt         DateTime  @default(now()) @map("last_activity_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([conversationId])
+  @@index([lastActivityAt])
+  @@map("ai_conversation_states")
+}
+
+/// Detailed audit ledger of conversational turns, token usage, latency, and costs
+model AiInteractionLog {
+  id               String   @id @default(uuid())
+  organizationId   String   @map("organization_id")
+  clinicId         String?  @map("clinic_id")
+  conversationId   String   @map("conversation_id")
+  inboundMessageId String?  @map("inbound_message_id")
+  detectedLanguage String   @map("detected_language")
+  detectedIntent   String   @map("detected_intent")
+  provider         String
+  model            String
+  toolCalls        Json?    @map("tool_calls")
+  outcome          String   // RESPONDED, HANDOVER, TOOL_EXECUTED, ERROR
+  latencyMs        Int      @map("latency_ms")
+  inputTokens      Int?     @map("input_tokens")
+  outputTokens     Int?     @map("output_tokens")
+  estimatedCost    Float?   @map("estimated_cost")
+  errorCode        String?  @map("error_code")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([detectedIntent])
+  @@map("ai_interaction_logs")
+}
+
+/// Multilingual verified administrative clinic FAQs
+model ClinicFaq {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  questionEn     String   @map("question_en")
+  answerEn       String   @map("answer_en")
+  questionUr     String?  @map("question_ur")
+  answerUr       String?  @map("answer_ur")
+  questionPs     String?  @map("question_ps")
+  answerPs       String?  @map("answer_ps")
+  category       String   @default("GENERAL") // GENERAL, APPOINTMENTS, TIMINGS, FEES, LOCATION, SERVICES
+  isActive       Boolean  @default(true) @map("is_active")
+  createdBy      String?  @map("created_by")
+  updatedBy      String?  @map("updated_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([category])
+  @@index([isActive])
+  @@map("clinic_faqs")
+}
+
+/// Controlled execution log of AI tool invocations with non-sensitive audit references
+model AiToolExecutionLog {
+  id                  String   @id @default(uuid())
+  organizationId      String   @map("organization_id")
+  clinicId            String?  @map("clinic_id")
+  conversationId      String   @map("conversation_id")
+  toolName            String   @map("tool_name")
+  executionStatus     String   @map("execution_status") // SUCCESS, FAILED, REJECTED
+  requestReference    String?  @map("request_reference")
+  resultReference     String?  @map("result_reference")
+  errorCode           String?  @map("error_code")
+  executionDurationMs Int      @map("execution_duration_ms")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([conversationId])
+  @@index([toolName])
+  @@index([createdAt])
+  @@map("ai_tool_execution_logs")
 }

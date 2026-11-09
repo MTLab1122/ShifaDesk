@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
+import { AIConversationManagerService } from '../ai-conversation/ai-conversation-manager.service';
 
 export const OPT_OUT_KEYWORDS = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'QUIT', 'END'];
 export const OPT_IN_KEYWORDS = ['START', 'UNSTOP', 'YES'];
@@ -9,7 +10,12 @@ export const HANDOVER_KEYWORDS = ['HUMAN', 'AGENT', 'RECEPTIONIST', 'OPERATOR', 
 export class WhatsAppInboundService {
   private readonly logger = new Logger(WhatsAppInboundService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(forwardRef(() => AIConversationManagerService))
+    private readonly aiConversationManager?: AIConversationManagerService,
+  ) {}
 
   /**
    * Main entry point for processing incoming WhatsApp webhook events
@@ -282,6 +288,27 @@ export class WhatsAppInboundService {
     this.logger.debug(
       `Inbound message ${providerMessageId} from ${waId} saved into conversation ${conversation.id}`,
     );
+
+    // 5. Trigger AI Multilingual Receptionist if eligible
+    if (
+      this.aiConversationManager &&
+      conversation.status !== 'HUMAN_HANDOVER' &&
+      contact.consentStatus !== 'OPTED_OUT' &&
+      !isHandoverRequested
+    ) {
+      try {
+        await this.aiConversationManager.handleInboundInteraction({
+          organizationId,
+          clinicId,
+          conversationId: conversation.id,
+          contactId: contact.id,
+          inboundMessageId: providerMessageId,
+          messageBody: body,
+        });
+      } catch (aiErr: any) {
+        this.logger.error(`AI interaction failed for message ${providerMessageId}: ${aiErr.message}`);
+      }
+    }
   }
 
   /**
@@ -328,3 +355,4 @@ export class WhatsAppInboundService {
     this.logger.debug(`Message ${providerMessageId} updated to status: ${updateData.status}`);
   }
 }
+

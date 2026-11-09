@@ -17,6 +17,7 @@ import {
   Calendar,
   ListOrdered,
   MessageSquare,
+  Bot,
   FlaskConical,
   Bell,
   FileBarChart,
@@ -106,6 +107,16 @@ const NAV_ITEMS: NavItem[] = [
     title: 'WhatsApp Chat',
     href: '/dashboard/conversations',
     icon: MessageSquare,
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.RECEPTIONIST,
+    ],
+  },
+  {
+    title: 'AI Receptionist',
+    href: '/dashboard/ai-assistant',
+    icon: Bot,
     roles: [
       UserRole.SUPER_ADMIN,
       UserRole.CLINIC_ADMIN,

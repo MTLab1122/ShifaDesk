@@ -90,3 +90,4 @@ export type UpdateWhatsappConversationInput = z.infer<typeof updateWhatsappConve
 export type AssignWhatsappConversationInput = z.infer<typeof assignWhatsappConversationSchema>;
 export type UpdateWhatsappConsentInput = z.infer<typeof updateWhatsappConsentSchema>;
 export type WhatsappWebhookQueryInput = z.infer<typeof whatsappWebhookQuerySchema>;
+

@@ -451,5 +451,111 @@ export interface WhatsAppConnectionHealth {
   lastCheckedAt: string;
 }
 
+export interface AiAssistantSettings {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  assistantName: string;
+  enabled: boolean;
+  defaultLanguage: string; // EN, UR, PS
+  supportedLanguages: string[];
+  greetingMessage: string;
+  fallbackMessage: string;
+  humanHandoverEnabled: boolean;
+  appointmentBookingEnabled: boolean;
+  tokenLookupEnabled: boolean;
+  clinicFaqEnabled: boolean;
+  maxTurnsPerConversation: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiConversationState {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  conversationId: string;
+  detectedLanguage: string;
+  currentIntent?: string | null;
+  currentStep?: string | null;
+  conversationContext: Record<string, unknown>;
+  handoverRequired: boolean;
+  lastProcessedMessageId?: string | null;
+  lastActivityAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiInteractionLog {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  conversationId: string;
+  inboundMessageId?: string | null;
+  detectedLanguage: string;
+  detectedIntent: string;
+  provider: string;
+  model: string;
+  toolCalls?: Record<string, unknown>[] | null;
+  outcome: string;
+  latencyMs: number;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  estimatedCost?: number | null;
+  errorCode?: string | null;
+  createdAt: string;
+}
+
+export interface ClinicFaq {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  questionEn: string;
+  answerEn: string;
+  questionUr?: string | null;
+  answerUr?: string | null;
+  questionPs?: string | null;
+  answerPs?: string | null;
+  category: string;
+  isActive: boolean;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiToolExecutionLog {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  conversationId: string;
+  toolName: string;
+  executionStatus: string;
+  requestReference?: string | null;
+  resultReference?: string | null;
+  errorCode?: string | null;
+  executionDurationMs: number;
+  createdAt: string;
+}
+
+export interface AiAssistantHealth {
+  configured: boolean;
+  provider: string;
+  model: string;
+  status: string; // ACTIVE, DEGRADED, OFFLINE
+  rateLimitStatus: string;
+  lastCheckedAt: string;
+}
+
+export interface AiUsageStats {
+  totalInteractions: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  averageLatencyMs: number;
+  handoverRatePercentage: number;
+  languageBreakdown: Record<string, number>;
+  topIntents: Array<{ intent: string; count: number }>;
+}
+
 
 

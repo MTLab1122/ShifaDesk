@@ -132,3 +132,4 @@ export class WhatsAppWebhookController {
     return { status: 'EVENT_RECEIVED' };
   }
 }
+

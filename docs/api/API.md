@@ -692,5 +692,81 @@ Updates patient opt-in / opt-out consent status manually.
 - **Body:** `{ "consentStatus": "OPTED_OUT", "optOutReason": "Patient requested stop" }`.
 - **Response `200 OK`:** Updated `WhatsappContact`.
 
+---
+
+## 11. AI Multilingual Receptionist API
+
+### `GET /api/v1/ai/settings`
+Retrieves AI Assistant configuration for the clinic/organization.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Query Parameters:** `clinicId` (optional).
+- **Response `200 OK`:** `AiAssistantSettings`.
+
+### `PATCH /api/v1/ai/settings`
+Updates AI Assistant settings, capabilities, language defaults, and greeting message.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Body:** `UpdateAiAssistantSettingsInput`.
+- **Response `200 OK`:** Updated `AiAssistantSettings`.
+
+### `POST /api/v1/ai/settings/enable` & `POST /api/v1/ai/settings/disable`
+Quick toggles to activate or pause the automated AI receptionist.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Body:** `{ "clinicId": "UUID" }`.
+- **Response `200 OK`:** Updated `AiAssistantSettings`.
+
+### `GET /api/v1/ai/faqs`
+Lists verified clinic FAQ entries with category and keyword search filters.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`, `DOCTOR`.
+- **Query Parameters:** `clinicId`, `category`, `search`, `isActive`, `page`, `limit`.
+- **Response `200 OK`:** Paginated list of `ClinicFaq`.
+
+### `POST /api/v1/ai/faqs`
+Creates a verified multilingual clinic FAQ.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Body:** `CreateClinicFaqInput` (`questionEn`, `answerEn`, optional Urdu/Pashto, `category`, `isActive`).
+- **Response `201 Created`:** Created `ClinicFaq`.
+
+### `PATCH /api/v1/ai/faqs/:id` & `DELETE /api/v1/ai/faqs/:id`
+Updates or deletes an existing clinic FAQ entry.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+
+### `GET /api/v1/ai/interactions`
+Audit log of all conversational turns, detected intents, languages, outcomes, latency, and costs.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Query Parameters:** `clinicId`, `conversationId`, `outcome`, `detectedIntent`, `page`, `limit`.
+- **Response `200 OK`:** Paginated `AiInteractionLog`.
+
+### `GET /api/v1/ai/tool-executions`
+Audit log of all executed sandboxed server tools.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Query Parameters:** `clinicId`, `conversationId`, `toolName`, `page`, `limit`.
+- **Response `200 OK`:** Paginated `AiToolExecutionLog`.
+
+### `GET /api/v1/ai/usage`
+Aggregated usage analytics (total interactions, token volume, estimated cost USD, average latency ms, handover percentage, language breakdown, top patient intents).
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Query Parameters:** `clinicId` (optional).
+- **Response `200 OK`:** `AiUsageStats`.
+
+### `GET /api/v1/ai/health`
+Health and rate limit status of the AI provider.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+- **Response `200 OK`:** `AiAssistantHealth`.
+
+### `GET /api/v1/ai/conversations/:id/state`
+Inspects active workflow state, current intent, step, and context for debugging.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+
+### `POST /api/v1/ai/conversations/:id/reset`
+Resets the conversation workflow state to `IDLE`.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`, `RECEPTIONIST`.
+
+### `POST /api/v1/ai/conversations/:id/test`
+Direct testing endpoint simulating incoming user messages in the playground simulator.
+- **Roles:** `SUPER_ADMIN`, `CLINIC_ADMIN`.
+- **Body:** `{ "message": "...", "clinicId": "UUID" }`.
+- **Response `200 OK`:** `{ "response": "...", "intent": "...", "outcome": "..." }`.
+
+
 
 

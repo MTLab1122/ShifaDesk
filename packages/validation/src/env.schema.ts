@@ -37,6 +37,14 @@ export const apiEnvSchema = z.object({
   META_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
   META_API_VERSION: z.string().default('v21.0'),
   META_GRAPH_BASE_URL: z.string().url().default('https://graph.facebook.com'),
+
+  // Phase 7: AI Multilingual Receptionist
+  AI_PROVIDER: z.string().default('openai'),
+  AI_API_KEY: z.string().optional(),
+  AI_MODEL: z.string().default('gpt-4o-mini'),
+  AI_MAX_OUTPUT_TOKENS: z.coerce.number().default(1000),
+  AI_REQUEST_TIMEOUT: z.coerce.number().default(15000),
+  AI_TEMPERATURE: z.coerce.number().default(0.2),
 });
 
 export const webEnvSchema = z.object({

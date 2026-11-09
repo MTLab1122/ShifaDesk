@@ -25,12 +25,22 @@ import {
   WhatsappMessage,
   WhatsappMessageTemplate,
   WhatsAppConnectionHealth,
+  AiAssistantSettings,
+  AiConversationState,
+  AiInteractionLog,
+  ClinicFaq,
+  AiToolExecutionLog,
+  AiAssistantHealth,
+  AiUsageStats,
 } from '@matabai/shared';
 import {
   CreateWhatsappIntegrationInput,
   SendWhatsappTextMessageInput,
   SendWhatsappTemplateMessageInput,
   UpdateWhatsappConsentInput,
+  UpdateAiAssistantSettingsInput,
+  CreateClinicFaqInput,
+  UpdateClinicFaqInput,
 } from '@matabai/validation';
 
 const API_BASE_URL =
@@ -750,5 +760,127 @@ export class ApiClient {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+  };
+
+  static ai = {
+    getSettings: (clinicId?: string) => {
+      const url = clinicId ? `/ai/settings?clinicId=${clinicId}` : '/ai/settings';
+      return ApiClient.request<AiAssistantSettings>(url);
+    },
+
+    updateSettings: (data: UpdateAiAssistantSettingsInput) =>
+      ApiClient.request<AiAssistantSettings>('/ai/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    enableAssistant: (clinicId?: string) =>
+      ApiClient.request<AiAssistantSettings>('/ai/settings/enable', {
+        method: 'POST',
+        body: JSON.stringify({ clinicId }),
+      }),
+
+    disableAssistant: (clinicId?: string) =>
+      ApiClient.request<AiAssistantSettings>('/ai/settings/disable', {
+        method: 'POST',
+        body: JSON.stringify({ clinicId }),
+      }),
+
+    listFaqs: (params?: {
+      clinicId?: string;
+      category?: string;
+      search?: string;
+      isActive?: boolean;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.category) query.set('category', params.category);
+      if (params?.search) query.set('search', params.search);
+      if (params?.isActive !== undefined) query.set('isActive', String(params.isActive));
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<ClinicFaq>>(`/ai/faqs?${query.toString()}`);
+    },
+
+    getFaq: (id: string) =>
+      ApiClient.request<ClinicFaq>(`/ai/faqs/${id}`),
+
+    createFaq: (data: CreateClinicFaqInput) =>
+      ApiClient.request<ClinicFaq>('/ai/faqs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateFaq: (id: string, data: UpdateClinicFaqInput) =>
+      ApiClient.request<ClinicFaq>(`/ai/faqs/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    deleteFaq: (id: string) =>
+      ApiClient.request<{ success: boolean; message: string }>(`/ai/faqs/${id}`, {
+        method: 'DELETE',
+      }),
+
+    listInteractions: (params?: {
+      clinicId?: string;
+      conversationId?: string;
+      outcome?: string;
+      detectedIntent?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.conversationId) query.set('conversationId', params.conversationId);
+      if (params?.outcome) query.set('outcome', params.outcome);
+      if (params?.detectedIntent) query.set('detectedIntent', params.detectedIntent);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<AiInteractionLog>>(`/ai/interactions?${query.toString()}`);
+    },
+
+    listToolExecutions: (params?: {
+      clinicId?: string;
+      conversationId?: string;
+      toolName?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.clinicId) query.set('clinicId', params.clinicId);
+      if (params?.conversationId) query.set('conversationId', params.conversationId);
+      if (params?.toolName) query.set('toolName', params.toolName);
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<AiToolExecutionLog>>(`/ai/tool-executions?${query.toString()}`);
+    },
+
+    getUsageStats: (clinicId?: string) => {
+      const url = clinicId ? `/ai/usage?clinicId=${clinicId}` : '/ai/usage';
+      return ApiClient.request<AiUsageStats>(url);
+    },
+
+    getHealth: () =>
+      ApiClient.request<AiAssistantHealth>('/ai/health'),
+
+    getConversationState: (conversationId: string) =>
+      ApiClient.request<AiConversationState>(`/ai/conversations/${conversationId}/state`),
+
+    resetConversationState: (conversationId: string) =>
+      ApiClient.request<AiConversationState>(`/ai/conversations/${conversationId}/reset`, {
+        method: 'POST',
+      }),
+
+    testConversationInteraction: (conversationId: string, message: string, clinicId?: string) =>
+      ApiClient.request<{ response: string; intent: string; outcome: string }>(
+        `/ai/conversations/${conversationId}/test`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ message, clinicId }),
+        },
+      ),
   };
 }

@@ -14,3 +14,4 @@ export * from './schedule-exception.schema.js';
 export * from './appointment.schema.js';
 export * from './queue.schema.js';
 export * from './whatsapp.schema.js';
+export * from './ai.schema.js';

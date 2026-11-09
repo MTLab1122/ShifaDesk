@@ -383,3 +383,110 @@ Registered pre-approved Meta WhatsApp templates for notifications outside the 24
 
 Unique Constraint: `[clinic_id, name, language]`.
 
+---
+
+# Phase 7: AI-Powered Multilingual Receptionist Schema
+
+## 1. `ai_assistant_settings`
+Configuration and capability permissions for the AI virtual assistant per clinic branch.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Unique, FK -> `clinics(id)` | Clinic branch |
+| `assistant_name` | `VARCHAR(100)` | Default `'ShifaDesk Assistant'` | Assistant persona name |
+| `enabled` | `BOOLEAN` | Default `true` | Master active/paused switch |
+| `default_language` | `VARCHAR(10)` | Default `'EN'` | Default initial language (`EN`, `UR`, `PS`) |
+| `supported_languages` | `TEXT[]` | Default `{'EN', 'UR', 'PS'}` | Supported languages array |
+| `greeting_message` | `TEXT` | NOT NULL | Greeting message template |
+| `fallback_message` | `TEXT` | NOT NULL | Fallback message template |
+| `human_handover_enabled` | `BOOLEAN` | Default `true` | Auto-escalation flag |
+| `appointment_booking_enabled` | `BOOLEAN` | Default `true` | Booking engine permission |
+| `token_lookup_enabled` | `BOOLEAN` | Default `true` | Queue token lookup permission |
+| `clinic_faq_enabled` | `BOOLEAN` | Default `true` | FAQ search permission |
+| `max_turns_per_conversation` | `INT` | Default `20` | Max turns before handover |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+## 2. `ai_conversation_states`
+Multi-turn conversational context, active workflow step, and extracted entities for live patient conversations.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `conversation_id` | `UUID` | Unique, FK -> `whatsapp_conversations(id)` | Linked conversation |
+| `detected_language` | `VARCHAR(20)` | Default `'en'` | Active language (`en`, `ur`, `ps`, `ur-Latn`, `ps-Latn`) |
+| `current_intent` | `VARCHAR(50)` | Nullable | Last detected intent |
+| `current_step` | `VARCHAR(50)` | Nullable | Active multi-turn step |
+| `conversation_context` | `JSONB` | Default `'{}'` | Extracted doctorId, date, time, draft details |
+| `handover_required` | `BOOLEAN` | Default `false` | Human escalation flag |
+| `last_processed_message_id` | `VARCHAR(128)` | Nullable | Provider message ID |
+| `last_activity_at` | `TIMESTAMPTZ` | Default `now()` | Last turn timestamp |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+## 3. `ai_interaction_logs`
+Detailed audit ledger of every conversational turn, token usage, latency, and estimated cost.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `conversation_id` | `UUID` | FK -> `whatsapp_conversations(id)` | Linked conversation |
+| `inbound_message_id` | `VARCHAR(128)` | Nullable | Inbound message ID |
+| `detected_language` | `VARCHAR(20)` | NOT NULL | Detected language |
+| `detected_intent` | `VARCHAR(50)` | NOT NULL | Classified intent |
+| `provider` | `VARCHAR(50)` | NOT NULL | AI provider (`openai`, `groq`, `offline`) |
+| `model` | `VARCHAR(50)` | NOT NULL | Model identifier |
+| `tool_calls` | `JSONB` | Nullable | Tool invocation metadata |
+| `outcome` | `VARCHAR(50)` | NOT NULL | `RESPONDED`, `HANDOVER`, `TOOL_EXECUTED`, `ERROR` |
+| `latency_ms` | `INT` | NOT NULL | Processing duration in ms |
+| `input_tokens` | `INT` | Nullable | Prompt token count |
+| `output_tokens` | `INT` | Nullable | Completion token count |
+| `estimated_cost` | `FLOAT` | Nullable | Cost in USD |
+| `error_code` | `VARCHAR(50)` | Nullable | Error code if failed |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Ingestion timestamp |
+
+## 4. `clinic_faqs`
+Multilingual verified administrative knowledge base for clinic FAQs.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `question_en` | `TEXT` | NOT NULL | English question |
+| `answer_en` | `TEXT` | NOT NULL | English answer |
+| `question_ur` | `TEXT` | Nullable | Urdu translation question |
+| `answer_ur` | `TEXT` | Nullable | Urdu translation answer |
+| `question_ps` | `TEXT` | Nullable | Pashto translation question |
+| `answer_ps` | `TEXT` | Nullable | Pashto translation answer |
+| `category` | `VARCHAR(50)` | Default `'GENERAL'` | `GENERAL`, `APPOINTMENTS`, `TIMINGS`, `FEES`, `LOCATION`, `SERVICES` |
+| `is_active` | `BOOLEAN` | Default `true` | Active switch |
+| `created_by` | `UUID` | Nullable | Author user profile ID |
+| `updated_by` | `UUID` | Nullable | Editor user profile ID |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+| `updated_at` | `TIMESTAMPTZ` | Updated on change | Timestamp |
+
+## 5. `ai_tool_execution_logs`
+Controlled execution audit of allowlisted tool invocations.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `conversation_id` | `UUID` | FK -> `whatsapp_conversations(id)` | Linked conversation |
+| `tool_name` | `VARCHAR(100)` | NOT NULL | Tool identifier |
+| `execution_status` | `VARCHAR(20)` | NOT NULL | `SUCCESS`, `FAILED`, `REJECTED` |
+| `request_reference` | `VARCHAR(100)` | Nullable | Non-sensitive reference |
+| `result_reference` | `VARCHAR(100)` | Nullable | Non-sensitive reference |
+| `error_code` | `VARCHAR(50)` | Nullable | Failure code |
+| `execution_duration_ms`| `INT` | NOT NULL | Duration in ms |
+| `created_at` | `TIMESTAMPTZ` | Default `now()` | Timestamp |
+
+
