@@ -1,5 +1,4 @@
 import { NotificationSchedulerService } from './notification-scheduler.service';
-import { NotificationRulesService } from './notification-rules.service';
 import { NotificationEventType, NotificationJobStatus, NotificationChannel } from '@matabai/shared';
 
 describe('NotificationSchedulerService', () => {

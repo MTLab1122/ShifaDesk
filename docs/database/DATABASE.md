@@ -597,5 +597,97 @@ Granular lifecycle event ledger for end-to-end observability (`QUEUED`, `CLAIMED
 ### 7. `in_app_notifications`
 Persistent dashboard alerts for authenticated staff and administrators with unread tracking.
 
+---
+
+## Phase 10 Schema: Diagnostic Laboratory & Secure Report Delivery
+
+### 1. `laboratory_test_categories`
+Diagnostic test departments and categories (Hematology, Biochemistry, etc.).
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `name` | `VARCHAR(100)` | NOT NULL | Category name |
+| `description` | `TEXT` | Nullable | Category description |
+| `active` | `BOOLEAN` | Default `true` | Active status |
+
+### 2. `laboratory_tests`
+Standardized catalog of diagnostic investigations with pricing and turnaround times.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | Nullable, FK -> `clinics(id)` | Clinic branch |
+| `category_id` | `UUID` | FK -> `laboratory_test_categories(id)` | Category reference |
+| `test_code` | `VARCHAR(50)` | NOT NULL | Test code (e.g. `CBC`, `LFT`) |
+| `test_name` | `VARCHAR(150)` | NOT NULL | Test name |
+| `sample_type` | `VARCHAR(50)` | Default `'Blood'` | Specimen type |
+| `turnaround_minutes` | `INT` | Default `240` | Estimated turnaround time |
+| `price` | `DECIMAL(10,2)`| NOT NULL | Standard price |
+| `currency` | `VARCHAR(3)` | Default `'PKR'` | Currency code |
+| `reference_range` | `VARCHAR(255)` | Nullable | Normal reference interval |
+| `unit` | `VARCHAR(50)` | Nullable | Measurement unit |
+| `result_type` | `VARCHAR(20)` | Default `'NUMERIC'` | `NUMERIC`, `TEXT`, `QUALITATIVE`, `STRUCTURED` |
+| `active` | `BOOLEAN` | Default `true` | Active status |
+
+### 3. `laboratory_packages` & `laboratory_package_items`
+Curated test profiles (e.g. Lipid Profile, Full Body Checkup) with bundled prices.
+
+### 4. `laboratory_orders` & `laboratory_order_items`
+Outpatient lab orders with auto-generated sequential number (`LAB-YYYYMM-XXXX`) and immutable unit price snapshots.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `order_number` | `VARCHAR(50)` | UNIQUE | Format: `LAB-YYYYMM-XXXX` |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `patient_id` | `UUID` | FK -> `patients(id)` | Patient reference |
+| `ordering_doctor_id` | `UUID` | Nullable, FK -> `doctors(id)` | Doctor reference |
+| `appointment_id` | `UUID` | Nullable, FK -> `appointments(id)` | Linked appointment |
+| `order_status` | `VARCHAR(30)` | Default `'REGISTERED'` | Order lifecycle state |
+| `total_amount` | `DECIMAL(10,2)`| Default `0` | Order total |
+| `payment_status` | `VARCHAR(20)` | Default `'PENDING'` | `PENDING`, `PARTIAL`, `PAID`, `REFUNDED` |
+
+### 5. `laboratory_samples`
+Physical specimen tracking with barcode/identifier `SMP-YYYYMM-XXXX` through 8 lifecycle stages.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | Primary Key |
+| `sample_barcode` | `VARCHAR(60)` | UNIQUE | Format: `SMP-YYYYMM-XXXX` |
+| `organization_id` | `UUID` | FK -> `organizations(id)` | Multi-tenant boundary |
+| `clinic_id` | `UUID` | FK -> `clinics(id)` | Clinic branch |
+| `order_id` | `UUID` | FK -> `laboratory_orders(id)` | Parent order |
+| `sample_type` | `VARCHAR(50)` | NOT NULL | Specimen type |
+| `status` | `VARCHAR(30)` | Default `'PENDING'` | `PENDING`, `COLLECTED`, `RECEIVED`, `PROCESSING`, `ACCEPTED`, `REJECTED`, `RECOLLECTION_REQUIRED`, `COMPLETED` |
+| `rejection_reason` | `TEXT` | Nullable | Required if status is REJECTED |
+| `collected_at` | `TIMESTAMPTZ` | Nullable | Collection timestamp |
+| `phlebotomist_id` | `UUID` | Nullable | Phlebotomist user profile ID |
+
+### 6. `laboratory_results` & `laboratory_result_reviews`
+Measured diagnostic values with units, reference intervals, flags, and separation-of-duties review ledger.
+- Separation of duties: Technician entering result cannot approve their own result.
+
+### 7. `laboratory_reports`
+Generated or uploaded diagnostic PDF report records.
+- AES-256-GCM authenticated encryption at rest.
+- Strict `%PDF-` magic-byte inspection before encryption.
+- Cryptographic SHA-256 checksum for tamper-evidence.
+- Pathologist formal approval and release gating.
+
+### 8. `laboratory_report_access_tokens` & `laboratory_report_access_logs`
+Unguessable 256-bit secure delivery tokens storing only SHA-256 digests (`tokenHash`).
+- Patient identity challenge verification (matching phone or year of birth).
+- Instant one-click revocation.
+- Comprehensive IP and user-agent access audit trail.
+
+### 9. `laboratory_audit_logs`
+Tamper-evident audit ledger capturing every mutation, result amendment, approval, and release with mandatory clinical justifications.
+
+
 
 

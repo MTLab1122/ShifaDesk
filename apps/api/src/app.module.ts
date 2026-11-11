@@ -21,6 +21,7 @@ import { QueueModule } from './modules/queue/queue.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { AIConversationModule } from './modules/ai-conversation/ai-conversation.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { VoiceModule } from './modules/voice/voice.module';
 import { LaboratoryModule } from './modules/laboratory/laboratory.module';
 import { ReportModule } from './modules/report/report.module';
 
@@ -51,6 +52,7 @@ import { ReportModule } from './modules/report/report.module';
     WhatsAppModule,
     AIConversationModule,
     NotificationModule,
+    VoiceModule,
     LaboratoryModule,
     ReportModule,
   ],

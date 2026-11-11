@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { LANGUAGE_LIST } from '@/lib/i18n';
-import { Activity, Calendar, Clock, User, Home, ArrowLeft, Globe } from 'lucide-react';
+import { Activity, Calendar, Clock, User, Home, ArrowLeft, Globe, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function PatientLayout({
@@ -23,6 +23,7 @@ export default function PatientLayout({
     { title: 'Book Appointment', href: '/patient/book-appointment', icon: Calendar },
     { title: 'My Appointments', href: '/patient/appointments', icon: Clock },
     { title: 'Live Token', href: '/patient/tokens', icon: Activity },
+    { title: 'Lab Reports', href: '/patient/reports', icon: FileText },
     { title: 'My Profile', href: '/patient/profile', icon: User },
   ];
 

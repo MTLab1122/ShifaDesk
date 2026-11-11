@@ -57,6 +57,18 @@ model Organization {
   notificationTemplates     NotificationTemplate[]
   notificationJobs          NotificationJob[]
   inAppNotifications        InAppNotification[]
+  voiceIntegrations         VoiceIntegration[]
+  voiceCallSessions         VoiceCallSession[]
+  voiceProviderSettings     VoiceProviderSettings[]
+  laboratoryCategories      LaboratoryTestCategory[]
+  laboratoryTests           LaboratoryTest[]
+  laboratoryPackages        LaboratoryPackage[]
+  laboratoryOrders          LaboratoryOrder[]
+  laboratorySamples         LaboratorySample[]
+  laboratoryResults         LaboratoryResult[]
+  laboratoryReports         LaboratoryReport[]
+  laboratoryReportAccessTokens LaboratoryReportAccessToken[]
+  laboratoryAuditLogs       LaboratoryAuditLog[]
 
   @@index([slug])
   @@index([status])
@@ -107,6 +119,18 @@ model Clinic {
   notificationTemplates      NotificationTemplate[]
   notificationJobs           NotificationJob[]
   inAppNotifications         InAppNotification[]
+  voiceIntegrations          VoiceIntegration[]
+  voiceCallSessions          VoiceCallSession[]
+  voiceProviderSettings      VoiceProviderSettings[]
+  laboratoryCategories       LaboratoryTestCategory[]
+  laboratoryTests            LaboratoryTest[]
+  laboratoryPackages         LaboratoryPackage[]
+  laboratoryOrders           LaboratoryOrder[]
+  laboratorySamples          LaboratorySample[]
+  laboratoryResults          LaboratoryResult[]
+  laboratoryReports          LaboratoryReport[]
+  laboratoryReportAccessTokens LaboratoryReportAccessToken[]
+  laboratoryAuditLogs        LaboratoryAuditLog[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -135,6 +159,13 @@ model UserProfile {
   assignedWhatsappConversations WhatsappConversation[]
   notificationPreferences NotificationPreference[]
   inAppNotifications      InAppNotification[]
+  assignedVoiceHandovers  VoiceHandoverRecord[]
+  enteredLaboratoryResults LaboratoryResult[]
+  reviewedLaboratoryResults LaboratoryResultReview[]
+  approvedLaboratoryReports LaboratoryReport[] @relation("ApprovedReports")
+  releasedLaboratoryReports LaboratoryReport[] @relation("ReleasedReports")
+  collectedLaboratorySamples LaboratorySample[] @relation("CollectedSamples")
+  receivedLaboratorySamples LaboratorySample[] @relation("ReceivedSamples")
 
   @@index([authUserId])
   @@index([email])
@@ -234,6 +265,7 @@ model Doctor {
   appointments       Appointment[]
   queueSettings      ClinicQueueSettings[]
   queueSessions      ClinicQueueSession[]
+  orderedLaboratoryOrders LaboratoryOrder[]
 
   @@unique([clinicId, registrationNumber])
   @@index([organizationId])
@@ -315,6 +347,9 @@ model Patient {
   queueTokens  QueueToken[]
   whatsappContacts WhatsappContact[]
   notificationPreferences NotificationPreference[]
+  voiceCallSessions VoiceCallSession[]
+  laboratoryOrders  LaboratoryOrder[]
+  laboratoryReportAccessTokens LaboratoryReportAccessToken[]
 
   @@unique([organizationId, patientNumber])
   @@index([organizationId])
@@ -407,6 +442,7 @@ model Appointment {
   patient       Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
   statusHistory AppointmentStatusHistory[]
   queueTokens   QueueToken[]
+  laboratoryOrders LaboratoryOrder[]
 
   @@unique([organizationId, appointmentNumber])
   @@index([organizationId])
@@ -1092,3 +1128,524 @@ model InAppNotification {
   @@index([createdAt])
   @@map("in_app_notifications")
 }
+
+/// Phone telephony integration credentials and assigned inbound numbers
+model VoiceIntegration {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  clinicId              String   @map("clinic_id")
+  provider              String   @default("TWILIO") // TWILIO, TELNYX, SIP
+  providerAccountId     String   @map("provider_account_id") // Account SID / Account ID
+  phoneNumber           String   @map("phone_number") // E.164 phone number
+  providerConfiguration Json     @default("{}") @map("provider_configuration")
+  enabled               Boolean  @default(true)
+  verificationStatus    String   @default("CONNECTED") @map("verification_status") // CONNECTED, PENDING, DISCONNECTED
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  callSessions VoiceCallSession[]
+
+  @@unique([clinicId, phoneNumber])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([phoneNumber])
+  @@index([enabled])
+  @@map("voice_integrations")
+}
+
+/// Telephony call session record tracking caller, state, audio duration, and language
+model VoiceCallSession {
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  clinicId             String    @map("clinic_id")
+  voiceIntegrationId   String?   @map("voice_integration_id")
+  providerCallId       String    @unique @map("provider_call_id") // e.g. Twilio CallSid
+  callerPhone          String    @map("caller_phone")
+  patientId            String?   @map("patient_id")
+  callDirection        String    @default("INBOUND") @map("call_direction") // INBOUND, OUTBOUND
+  callStatus           String    @default("INITIATED") @map("call_status") // INITIATED, RINGING, IN_PROGRESS, COMPLETED, BUSY, NO_ANSWER, FAILED, CANCELLED
+  detectedLanguage     String    @default("en") @map("detected_language")
+  selectedLanguage     String    @default("en") @map("selected_language")
+  startedAt            DateTime  @default(now()) @map("started_at")
+  answeredAt           DateTime? @map("answered_at")
+  endedAt              DateTime? @map("ended_at")
+  durationSeconds      Int       @default(0) @map("duration_seconds")
+  handoverStatus       String    @default("NONE") @map("handover_status") // NONE, REQUESTED, TRANSFERRED, FAILED
+  endReason            String?   @map("end_reason")
+  recordingUrl         String?   @map("recording_url")
+  recordingConsent     Boolean   @default(false) @map("recording_consent")
+  verificationStatus   String    @default("UNVERIFIED") @map("verification_status") // UNVERIFIED, VERIFIED, EXEMPT
+  verificationAttempts Int       @default(0) @map("verification_attempts")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization     Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic           Clinic                     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  voiceIntegration VoiceIntegration?          @relation(fields: [voiceIntegrationId], references: [id], onDelete: SetNull)
+  patient          Patient?                   @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  messages         VoiceConversationMessage[]
+  events           VoiceCallEvent[]
+  handovers        VoiceHandoverRecord[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([providerCallId])
+  @@index([callerPhone])
+  @@index([patientId])
+  @@index([callStatus])
+  @@index([startedAt])
+  @@map("voice_call_sessions")
+}
+
+/// Granular turns and transcribed messages within an active voice conversation
+model VoiceConversationMessage {
+  id              String   @id @default(uuid())
+  callSessionId   String   @map("call_session_id")
+  speaker         String   // CALLER, ASSISTANT, SYSTEM
+  messageText     String   @map("message_text")
+  language        String   @default("en")
+  audioUrl        String?  @map("audio_url")
+  confidenceScore Float?   @map("confidence_score")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  callSession VoiceCallSession @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+
+  @@index([callSessionId])
+  @@index([speaker])
+  @@index([createdAt])
+  @@map("voice_conversation_messages")
+}
+
+/// Telephony lifecycle event ledger (answering, speech gather, DTMF keypresses, transfers)
+model VoiceCallEvent {
+  id              String   @id @default(uuid())
+  callSessionId   String   @map("call_session_id")
+  providerEventId String?  @map("provider_event_id")
+  eventType       String   @map("event_type")
+  eventPayload    Json?    @default("{}") @map("event_payload")
+  occurredAt      DateTime @default(now()) @map("occurred_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  callSession VoiceCallSession @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+
+  @@index([callSessionId])
+  @@index([eventType])
+  @@index([occurredAt])
+  @@map("voice_call_events")
+}
+
+/// Clinic voice provider configuration, STT/TTS engine, and IVR greeting policies
+model VoiceProviderSettings {
+  id                      String   @id @default(uuid())
+  organizationId          String   @map("organization_id")
+  clinicId                String?  @unique @map("clinic_id")
+  sttProvider             String   @default("openai_whisper") @map("stt_provider")
+  ttsProvider             String   @default("openai_tts") @map("tts_provider")
+  llmProvider             String   @default("openai") @map("llm_provider")
+  voiceModel              String   @default("alloy") @map("voice_model")
+  voiceSpeed              Float    @default(1.0) @map("voice_speed")
+  conversationTimeoutMs   Int      @default(15000) @map("conversation_timeout_ms")
+  maxSilenceTimeoutMs     Int      @default(5000) @map("max_silence_timeout_ms")
+  maxInteractionAttempts  Int      @default(3) @map("max_interaction_attempts")
+  enableRecording         Boolean  @default(false) @map("enable_recording")
+  recordingConsentMessage String   @default("This call may be recorded for quality and operations.") @map("recording_consent_message")
+  transcriptRetentionDays Int      @default(30) @map("transcript_retention_days")
+  humanTransferNumber     String?  @map("human_transfer_number")
+  ivrGreetingMessage      String   @default("Welcome to the clinic AI Receptionist. For Urdu press 1, Da Pashto dapara 2, for English press 3.") @map("ivr_greeting_message")
+  enabled                 Boolean  @default(true)
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@map("voice_provider_settings")
+}
+
+/// Human receptionist call transfer and handover records
+model VoiceHandoverRecord {
+  id             String    @id @default(uuid())
+  callSessionId  String    @map("call_session_id")
+  assignedUserId String?   @map("assigned_user_id")
+  transferTarget String    @map("transfer_target")
+  handoverReason String    @map("handover_reason")
+  transferStatus String    @default("PENDING") @map("transfer_status") // PENDING, IN_PROGRESS, COMPLETED, FAILED
+  summary        String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+
+  callSession  VoiceCallSession @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+  assignedUser UserProfile?     @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([callSessionId])
+  @@index([assignedUserId])
+  @@index([transferStatus])
+  @@index([createdAt])
+  @@map("voice_handover_records")
+}
+
+// ==========================================
+// Phase 10: Diagnostic Laboratory & Reports
+// ==========================================
+
+/// Diagnostic test categories (e.g. Hematology, Biochemistry, Microbiology)
+model LaboratoryTestCategory {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  name           String
+  description    String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  tests        LaboratoryTest[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([active])
+  @@map("laboratory_test_categories")
+}
+
+/// Diagnostic test catalog definitions
+model LaboratoryTest {
+  id                      String   @id @default(uuid())
+  organizationId          String   @map("organization_id")
+  clinicId                String?  @map("clinic_id")
+  categoryId              String   @map("category_id")
+  testCode                String   @map("test_code")
+  testName                String   @map("test_name")
+  description             String?
+  sampleType              String   @default("Blood") @map("sample_type")
+  collectionInstructions  String?  @map("collection_instructions")
+  preparationInstructions String?  @map("preparation_instructions")
+  processingNotes         String?  @map("processing_notes")
+  turnaroundMinutes       Int      @default(240) @map("turnaround_minutes")
+  price                   Float    @default(0)
+  currency                String   @default("PKR")
+  referenceRange          String?  @map("reference_range")
+  unit                    String?
+  resultType              String   @default("NUMERIC") @map("result_type") // NUMERIC, TEXT, QUALITATIVE, STRUCTURED
+  active                  Boolean  @default(true)
+  createdById             String?  @map("created_by_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  category     LaboratoryTestCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  packageItems LaboratoryPackageItem[]
+  orderItems   LaboratoryOrderItem[]
+
+  @@unique([organizationId, testCode])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([categoryId])
+  @@index([testCode])
+  @@index([active])
+  @@map("laboratory_tests")
+}
+
+/// Diagnostic test packages and panels (e.g. Lipid Profile, Complete Health Checkup)
+model LaboratoryPackage {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  name           String
+  code           String
+  description    String?
+  price          Float    @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  items        LaboratoryPackageItem[]
+  orderItems   LaboratoryOrderItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([code])
+  @@index([active])
+  @@map("laboratory_packages")
+}
+
+/// Pivot linking packages to their member diagnostic tests
+model LaboratoryPackageItem {
+  id        String   @id @default(uuid())
+  packageId String   @map("package_id")
+  testId    String   @map("test_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  package LaboratoryPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  test    LaboratoryTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, testId])
+  @@index([packageId])
+  @@index([testId])
+  @@map("laboratory_package_items")
+}
+
+/// Laboratory diagnostic order header
+model LaboratoryOrder {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  clinicId               String    @map("clinic_id")
+  patientId              String    @map("patient_id")
+  orderingDoctorId       String?   @map("ordering_doctor_id")
+  appointmentId          String?   @map("appointment_id")
+  orderReference         String    @unique @map("order_reference") // e.g. LAB-202611-0012
+  orderStatus            String    @default("REGISTERED") @map("order_status") // DRAFT, REGISTERED, CONFIRMED, SAMPLE_PENDING, SAMPLE_COLLECTED, PROCESSING, RESULTS_PENDING, UNDER_REVIEW, APPROVED, REPORT_READY, DELIVERED, CANCELLED
+  totalAmount            Float     @default(0) @map("total_amount")
+  currency               String    @default("PKR")
+  notes                  String?
+  cancellationReason     String?   @map("cancellation_reason")
+  createdById            String?   @map("created_by_id")
+  expectedCompletionDate DateTime? @map("expected_completion_date")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic         Clinic                @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient        Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  orderingDoctor Doctor?               @relation(fields: [orderingDoctorId], references: [id], onDelete: SetNull)
+  appointment    Appointment?          @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  items          LaboratoryOrderItem[]
+  samples        LaboratorySample[]
+  reports        LaboratoryReport[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([orderingDoctorId])
+  @@index([orderStatus])
+  @@index([createdAt])
+  @@map("laboratory_orders")
+}
+
+/// Line items within a laboratory order with immutable price snapshotting
+model LaboratoryOrderItem {
+  id               String   @id @default(uuid())
+  orderId          String   @map("order_id")
+  testId           String   @map("test_id")
+  packageId        String?  @map("package_id")
+  testNameSnapshot String   @map("test_name_snapshot")
+  testCodeSnapshot String   @map("test_code_snapshot")
+  priceSnapshot    Float    @map("price_snapshot")
+  status           String   @default("PENDING") // PENDING, SAMPLE_COLLECTED, PROCESSING, COMPLETED, CANCELLED
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  order   LaboratoryOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  test    LaboratoryTest     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  package LaboratoryPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  result  LaboratoryResult?
+
+  @@index([orderId])
+  @@index([testId])
+  @@index([packageId])
+  @@index([status])
+  @@map("laboratory_order_items")
+}
+
+/// Physical specimens / samples collected from patients
+model LaboratorySample {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  clinicId               String    @map("clinic_id")
+  orderId                String    @map("order_id")
+  sampleReference        String    @unique @map("sample_reference") // e.g. SMP-202611-0089
+  sampleType             String    @map("sample_type") // Blood, Urine, Serum, Sputum, etc.
+  sampleStatus           String    @default("PENDING") @map("sample_status") // PENDING, COLLECTED, RECEIVED, PROCESSING, ACCEPTED, REJECTED, RECOLLECTION_REQUIRED, COMPLETED
+  collectionInstructions String?   @map("collection_instructions")
+  collectedById          String?   @map("collected_by_id")
+  collectedAt            DateTime? @map("collected_at")
+  receivedById           String?   @map("received_by_id")
+  receivedAt             DateTime? @map("received_at")
+  rejectionReason        String?   @map("rejection_reason")
+  notes                  String?
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  order        LaboratoryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  collectedBy  UserProfile? @relation("CollectedSamples", fields: [collectedById], references: [id], onDelete: SetNull)
+  receivedBy   UserProfile? @relation("ReceivedSamples", fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([orderId])
+  @@index([sampleStatus])
+  @@map("laboratory_samples")
+}
+
+/// Recorded diagnostic test results entered by laboratory technicians
+model LaboratoryResult {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String   @map("clinic_id")
+  orderItemId    String   @unique @map("order_item_id")
+  resultType     String   @default("NUMERIC") @map("result_type") // NUMERIC, TEXT, QUALITATIVE, STRUCTURED
+  resultValue    String   @map("result_value")
+  unit           String?
+  referenceRange String?  @map("reference_range")
+  resultNotes    String?  @map("result_notes")
+  resultStatus   String   @default("ENTERED") @map("result_status") // PENDING, ENTERED, AMENDED, UNDER_REVIEW, APPROVED, REJECTED
+  enteredById    String   @map("entered_by_id")
+  enteredAt      DateTime @default(now()) @map("entered_at")
+  amendedReason  String?  @map("amended_reason")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  orderItem    LaboratoryOrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  enteredBy    UserProfile              @relation(fields: [enteredById], references: [id], onDelete: Cascade)
+  reviews      LaboratoryResultReview[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([orderItemId])
+  @@index([resultStatus])
+  @@map("laboratory_results")
+}
+
+/// Reviewer/Pathologist evaluation decision on test results
+model LaboratoryResultReview {
+  id         String   @id @default(uuid())
+  resultId   String   @map("result_id")
+  reviewerId String   @map("reviewer_id")
+  decision   String   @default("APPROVED") // APPROVED, REJECTED, AMENDMENT_REQUESTED
+  comments   String?
+  reviewedAt DateTime @default(now()) @map("reviewed_at")
+
+  result   LaboratoryResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  reviewer UserProfile      @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@index([reviewerId])
+  @@index([decision])
+  @@map("laboratory_result_reviews")
+}
+
+/// Finalized or uploaded PDF diagnostic reports
+model LaboratoryReport {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  clinicId        String    @map("clinic_id")
+  orderId         String    @map("order_id")
+  reportReference String    @unique @map("report_reference") // e.g. REP-202611-0023
+  version         Int       @default(1)
+  storagePath     String    @map("storage_path")
+  fileName        String    @map("file_name")
+  fileSizeBytes   Int       @default(0) @map("file_size_bytes")
+  mimeType        String    @default("application/pdf") @map("mime_type")
+  reportStatus    String    @default("DRAFT") @map("report_status") // DRAFT, PENDING_REVIEW, REJECTED, APPROVED, READY_FOR_RELEASE, RELEASED, SUPERSEDED, CANCELLED
+  approvedById    String?   @map("approved_by_id")
+  approvedAt      DateTime? @map("approved_at")
+  releasedById    String?   @map("released_by_id")
+  releasedAt      DateTime? @map("released_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  order        LaboratoryOrder               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  approvedBy   UserProfile?                  @relation("ApprovedReports", fields: [approvedById], references: [id], onDelete: SetNull)
+  releasedBy   UserProfile?                  @relation("ReleasedReports", fields: [releasedById], references: [id], onDelete: SetNull)
+  accessTokens LaboratoryReportAccessToken[]
+  accessLogs   LaboratoryReportAccessLog[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([orderId])
+  @@index([reportStatus])
+  @@index([createdAt])
+  @@map("laboratory_reports")
+}
+
+/// High-entropy, short-lived, unguessable access tokens for secure patient report delivery
+model LaboratoryReportAccessToken {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  clinicId       String    @map("clinic_id")
+  reportId       String    @map("report_id")
+  patientId      String    @map("patient_id")
+  tokenHash      String    @unique @map("token_hash") // SHA-256 hash of plaintext access token
+  tokenPrefix    String    @map("token_prefix") // First 8 chars for audit display
+  expiresAt      DateTime  @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  accessCount    Int       @default(0) @map("access_count")
+  maxAccessCount Int       @default(10) @map("max_access_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  report       LaboratoryReport            @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  patient      Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  accessLogs   LaboratoryReportAccessLog[]
+
+  @@index([reportId])
+  @@index([patientId])
+  @@index([tokenPrefix])
+  @@index([expiresAt])
+  @@map("laboratory_report_access_tokens")
+}
+
+/// Access log auditing every view, download, or failed token attempt
+model LaboratoryReportAccessLog {
+  id           String   @id @default(uuid())
+  reportId     String   @map("report_id")
+  patientId    String?  @map("patient_id")
+  tokenId      String?  @map("token_id")
+  accessStatus String   @map("access_status") // SUCCESS, EXPIRED, REVOKED, INVALID_VERIFICATION, ACCESS_LIMIT_EXCEEDED
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  metadata     Json?    @default("{}")
+  accessedAt   DateTime @default(now()) @map("accessed_at")
+
+  report LaboratoryReport             @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  token  LaboratoryReportAccessToken? @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+
+  @@index([reportId])
+  @@index([patientId])
+  @@index([accessStatus])
+  @@index([accessedAt])
+  @@map("laboratory_report_access_logs")
+}
+
+/// Dedicated audit trail for sensitive laboratory operations
+model LaboratoryAuditLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  actorId        String   @map("actor_id")
+  entityType     String   @map("entity_type") // TEST, PACKAGE, ORDER, SAMPLE, RESULT, REPORT
+  entityId       String   @map("entity_id")
+  action         String   // CREATED, UPDATED, STATUS_CHANGED, REVIEWED, APPROVED, RELEASED, REVOKED
+  previousValues Json?    @default("{}") @map("previous_values")
+  newValues      Json?    @default("{}") @map("new_values")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("laboratory_audit_logs")
+}
+
+

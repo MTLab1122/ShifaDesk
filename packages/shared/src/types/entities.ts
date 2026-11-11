@@ -13,6 +13,23 @@ import {
   NotificationConsentStatus,
   NotificationConsentSource,
   NotificationAttemptStatus,
+  VoiceProvider,
+  CallDirection,
+  CallStatus,
+  VoiceHandoverStatus,
+  VoiceSpeakerType,
+  TelephonyEventType,
+  SttProvider,
+  TtsProvider,
+  CallerVerificationStatus,
+  VoiceTransferStatus,
+  LabOrderStatus,
+  LabSampleStatus,
+  LabResultStatus,
+  LabReportStatus,
+  LabResultType,
+  ReviewDecision,
+  LabAccessStatus,
 } from './enums.js';
 
 export interface Organization {
@@ -708,6 +725,362 @@ export interface NotificationAnalytics {
   statusBreakdown: Record<string, number>;
   eventTypeBreakdown: Record<string, number>;
 }
+
+// Phase 9: AI Voice Receptionist & Telephony Entities
+export interface VoiceIntegration {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  provider: VoiceProvider | string;
+  accountSid: string;
+  phoneNumber: string;
+  webhookUrl?: string | null;
+  statusCallbackUrl?: string | null;
+  encryptedAuthToken: string;
+  encryptedConfig?: Record<string, any> | null;
+  isVerified: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VoiceConversationMessage {
+  id: string;
+  callSessionId: string;
+  speaker: VoiceSpeakerType | string;
+  messageText: string;
+  language: string;
+  audioUrl?: string | null;
+  confidenceScore?: number | null;
+  createdAt: string;
+}
+
+export interface VoiceCallEvent {
+  id: string;
+  callSessionId: string;
+  providerEventId?: string | null;
+  eventType: TelephonyEventType | string;
+  eventPayload?: Record<string, any> | null;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface VoiceHandoverRecord {
+  id: string;
+  callSessionId: string;
+  assignedUserId?: string | null;
+  transferTarget: string;
+  handoverReason: string;
+  transferStatus: VoiceTransferStatus | string;
+  summary?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
+  assignedUser?: UserProfile | null;
+}
+
+export interface VoiceCallSession {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  voiceIntegrationId?: string | null;
+  providerCallId: string;
+  callerPhone: string;
+  calledPhone: string;
+  patientId?: string | null;
+  direction: CallDirection | string;
+  callStatus: CallStatus | string;
+  detectedLanguage?: string | null;
+  selectedLanguage?: string | null;
+  startedAt: string;
+  answeredAt?: string | null;
+  endedAt?: string | null;
+  durationSeconds: number;
+  handoverStatus: VoiceHandoverStatus | string;
+  handoverReason?: string | null;
+  recordingUrl?: string | null;
+  recordingConsent: boolean;
+  verificationStatus: CallerVerificationStatus | string;
+  verificationAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient | null;
+  messages?: VoiceConversationMessage[];
+  events?: VoiceCallEvent[];
+  handovers?: VoiceHandoverRecord[];
+}
+
+export interface VoiceProviderSettings {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  sttProvider: SttProvider | string;
+  ttsProvider: TtsProvider | string;
+  llmProvider: string;
+  voiceModel: string;
+  voiceSpeed: number;
+  conversationTimeoutMs: number;
+  maxSilenceTimeoutMs: number;
+  maxInteractionAttempts: number;
+  enableRecording: boolean;
+  recordingConsentMessage: string;
+  transcriptRetentionDays: number;
+  humanTransferNumber?: string | null;
+  ivrGreetingMessage: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VoiceAnalytics {
+  totalCalls: number;
+  completedCalls: number;
+  missedCalls: number;
+  failedCalls: number;
+  averageDurationSeconds: number;
+  languageDistribution: Record<string, number>;
+  handoverCount: number;
+  appointmentsBookedViaVoice: number;
+  callsByDay: Array<{ date: string; count: number; completed: number }>;
+}
+
+// Phase 10: Diagnostic Laboratory Management & Secure Report Delivery Entities
+export interface LaboratoryTestCategory {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  tests?: LaboratoryTest[];
+}
+
+export interface LaboratoryTest {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  categoryId: string;
+  testCode: string;
+  testName: string;
+  description?: string | null;
+  sampleType: string;
+  collectionInstructions?: string | null;
+  preparationInstructions?: string | null;
+  processingNotes?: string | null;
+  turnaroundMinutes: number;
+  price: number;
+  currency: string;
+  referenceRange?: string | null;
+  unit?: string | null;
+  resultType: LabResultType | string;
+  active: boolean;
+  createdById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  category?: LaboratoryTestCategory;
+}
+
+export interface LaboratoryPackageItem {
+  id: string;
+  packageId: string;
+  testId: string;
+  createdAt: string;
+  package?: LaboratoryPackage;
+  test?: LaboratoryTest;
+}
+
+export interface LaboratoryPackage {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  name: string;
+  code: string;
+  description?: string | null;
+  price: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  items?: LaboratoryPackageItem[];
+}
+
+export interface LaboratoryOrderItem {
+  id: string;
+  orderId: string;
+  testId: string;
+  packageId?: string | null;
+  testNameSnapshot: string;
+  testCodeSnapshot: string;
+  priceSnapshot: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  test?: LaboratoryTest;
+  package?: LaboratoryPackage | null;
+  result?: LaboratoryResult | null;
+}
+
+export interface LaboratoryOrder {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  orderingDoctorId?: string | null;
+  appointmentId?: string | null;
+  orderReference: string;
+  orderStatus: LabOrderStatus | string;
+  totalAmount: number;
+  currency: string;
+  notes?: string | null;
+  cancellationReason?: string | null;
+  createdById?: string | null;
+  expectedCompletionDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient;
+  orderingDoctor?: Doctor | null;
+  appointment?: Appointment | null;
+  clinic?: Clinic;
+  items?: LaboratoryOrderItem[];
+  samples?: LaboratorySample[];
+  reports?: LaboratoryReport[];
+}
+
+export interface LaboratorySample {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  orderId: string;
+  sampleReference: string;
+  sampleType: string;
+  sampleStatus: LabSampleStatus | string;
+  collectionInstructions?: string | null;
+  collectedById?: string | null;
+  collectedAt?: string | null;
+  receivedById?: string | null;
+  receivedAt?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order?: LaboratoryOrder;
+  collectedBy?: UserProfile | null;
+  receivedBy?: UserProfile | null;
+}
+
+export interface LaboratoryResultReview {
+  id: string;
+  resultId: string;
+  reviewerId: string;
+  decision: ReviewDecision | string;
+  comments?: string | null;
+  reviewedAt: string;
+  reviewer?: UserProfile;
+}
+
+export interface LaboratoryResult {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  orderItemId: string;
+  resultType: LabResultType | string;
+  resultValue: string;
+  unit?: string | null;
+  referenceRange?: string | null;
+  resultNotes?: string | null;
+  resultStatus: LabResultStatus | string;
+  enteredById: string;
+  enteredAt: string;
+  amendedReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  enteredBy?: UserProfile;
+  orderItem?: LaboratoryOrderItem;
+  reviews?: LaboratoryResultReview[];
+}
+
+export interface LaboratoryReport {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  orderId: string;
+  reportReference: string;
+  version: number;
+  storagePath: string;
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  reportStatus: LabReportStatus | string;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  releasedById?: string | null;
+  releasedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order?: LaboratoryOrder;
+  approvedBy?: UserProfile | null;
+  releasedBy?: UserProfile | null;
+  accessTokens?: LaboratoryReportAccessToken[];
+}
+
+export interface LaboratoryReportAccessToken {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  reportId: string;
+  patientId: string;
+  tokenHash: string;
+  tokenPrefix: string;
+  expiresAt: string;
+  revokedAt?: string | null;
+  accessCount: number;
+  maxAccessCount: number;
+  createdAt: string;
+  report?: LaboratoryReport;
+  patient?: Patient;
+}
+
+export interface LaboratoryReportAccessLog {
+  id: string;
+  reportId: string;
+  patientId?: string | null;
+  tokenId?: string | null;
+  accessStatus: LabAccessStatus | string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, unknown> | null;
+  accessedAt: string;
+}
+
+export interface LaboratoryAuditLog {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  actorId: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  previousValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface LaboratoryAnalytics {
+  totalOrders: number;
+  ordersToday: number;
+  pendingSamples: number;
+  processingSamples: number;
+  resultsAwaitingReview: number;
+  reportsApproved: number;
+  reportsDelivered: number;
+  averageTurnaroundMinutes: number;
+  ordersByStatus: Record<string, number>;
+  samplesByStatus: Record<string, number>;
+  reportsByStatus: Record<string, number>;
+  volumeByDay: Array<{ date: string; orders: number; completed: number }>;
+}
+
+
 
 
 

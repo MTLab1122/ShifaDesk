@@ -19,6 +19,7 @@ import {
   ListOrdered,
   MessageSquare,
   Bot,
+  PhoneCall,
   FlaskConical,
   Bell,
   FileBarChart,
@@ -125,6 +126,17 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    title: 'Voice Assistant',
+    href: '/dashboard/voice-assistant',
+    icon: PhoneCall,
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.RECEPTIONIST,
+      UserRole.DOCTOR,
+    ],
+  },
+  {
     title: 'Laboratory',
     href: '/dashboard/laboratory',
     icon: FlaskConical,
@@ -133,6 +145,9 @@ const NAV_ITEMS: NavItem[] = [
       UserRole.CLINIC_ADMIN,
       UserRole.DOCTOR,
       UserRole.LAB_STAFF,
+      UserRole.LAB_MANAGER,
+      UserRole.LAB_REVIEWER,
+      UserRole.RECEPTIONIST,
     ],
   },
   {

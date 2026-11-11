@@ -883,6 +883,506 @@ CREATE POLICY "in_app_notifications_write" ON in_app_notifications
     )
   );
 
+-- ==============================================================================
+-- 12. Phase 9: AI Voice Receptionist & Telephony RLS Policies
+-- ==============================================================================
+
+ALTER TABLE voice_integrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_call_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_conversation_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_call_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_provider_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE voice_handover_records ENABLE ROW LEVEL SECURITY;
+
+-- Voice Integrations
+CREATE POLICY "voice_integrations_select" ON voice_integrations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = voice_integrations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "voice_integrations_write" ON voice_integrations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = voice_integrations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Voice Call Sessions
+CREATE POLICY "voice_call_sessions_select" ON voice_call_sessions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = voice_call_sessions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "voice_call_sessions_write" ON voice_call_sessions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = voice_call_sessions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Voice Conversation Messages
+CREATE POLICY "voice_conversation_messages_select" ON voice_conversation_messages
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM voice_call_sessions vcs
+      JOIN organization_memberships om ON vcs.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE vcs.id = voice_conversation_messages.call_session_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Voice Call Events
+CREATE POLICY "voice_call_events_select" ON voice_call_events
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM voice_call_sessions vcs
+      JOIN organization_memberships om ON vcs.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE vcs.id = voice_call_events.call_session_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Voice Provider Settings
+CREATE POLICY "voice_provider_settings_select" ON voice_provider_settings
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = voice_provider_settings.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "voice_provider_settings_write" ON voice_provider_settings
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = voice_provider_settings.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Voice Handover Records
+CREATE POLICY "voice_handover_records_select" ON voice_handover_records
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM voice_call_sessions vcs
+      JOIN organization_memberships om ON vcs.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE vcs.id = voice_handover_records.call_session_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "voice_handover_records_write" ON voice_handover_records
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM voice_call_sessions vcs
+      JOIN organization_memberships om ON vcs.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE vcs.id = voice_handover_records.call_session_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- ==============================================================================
+-- 13. Phase 10: Diagnostic Laboratory & Secure Report Delivery RLS Policies
+-- ==============================================================================
+
+ALTER TABLE laboratory_test_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_tests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_packages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_package_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_samples ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_result_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_report_access_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_report_access_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE laboratory_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Laboratory Test Categories Policies
+CREATE POLICY "laboratory_test_categories_select" ON laboratory_test_categories
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_test_categories.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_test_categories_write" ON laboratory_test_categories
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_test_categories.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Laboratory Tests Policies
+CREATE POLICY "laboratory_tests_select" ON laboratory_tests
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_tests.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_tests_write" ON laboratory_tests
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_tests.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Laboratory Packages & Package Items Policies
+CREATE POLICY "laboratory_packages_select" ON laboratory_packages
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_packages.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_packages_write" ON laboratory_packages
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_packages.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_package_items_select" ON laboratory_package_items
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_packages lp
+      JOIN organization_memberships om ON lp.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lp.id = laboratory_package_items.package_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_package_items_write" ON laboratory_package_items
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_packages lp
+      JOIN organization_memberships om ON lp.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lp.id = laboratory_package_items.package_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Laboratory Orders & Items Policies
+CREATE POLICY "laboratory_orders_select" ON laboratory_orders
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_orders.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_orders_write" ON laboratory_orders
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_orders.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_order_items_select" ON laboratory_order_items
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_orders lo
+      JOIN organization_memberships om ON lo.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lo.id = laboratory_order_items.order_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_order_items_write" ON laboratory_order_items
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_orders lo
+      JOIN organization_memberships om ON lo.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lo.id = laboratory_order_items.order_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Laboratory Samples Policies
+CREATE POLICY "laboratory_samples_select" ON laboratory_samples
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_samples.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_samples_write" ON laboratory_samples
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_samples.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Laboratory Results & Reviews Policies
+CREATE POLICY "laboratory_results_select" ON laboratory_results
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_results.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_results_write" ON laboratory_results
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_results.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER', 'LAB_REVIEWER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_result_reviews_select" ON laboratory_result_reviews
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_results lr
+      JOIN organization_memberships om ON lr.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lr.id = laboratory_result_reviews.result_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_result_reviews_write" ON laboratory_result_reviews
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_results lr
+      JOIN organization_memberships om ON lr.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lr.id = laboratory_result_reviews.result_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_MANAGER', 'LAB_REVIEWER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- Laboratory Reports & Access Policies
+CREATE POLICY "laboratory_reports_select" ON laboratory_reports
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_reports.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_reports_write" ON laboratory_reports
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_reports.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER', 'LAB_REVIEWER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_report_access_tokens_select" ON laboratory_report_access_tokens
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_report_access_tokens.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_report_access_tokens_write" ON laboratory_report_access_tokens
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_report_access_tokens.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_STAFF', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_report_access_logs_select" ON laboratory_report_access_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM laboratory_reports lr
+      JOIN organization_memberships om ON lr.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE lr.id = laboratory_report_access_logs.report_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_report_access_logs_write" ON laboratory_report_access_logs
+  FOR ALL
+  USING (true);
+
+-- Laboratory Audit Logs Policies
+CREATE POLICY "laboratory_audit_logs_select" ON laboratory_audit_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_audit_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_MANAGER')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "laboratory_audit_logs_write" ON laboratory_audit_logs
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = laboratory_audit_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+
+
 
 
 

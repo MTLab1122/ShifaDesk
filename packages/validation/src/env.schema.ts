@@ -45,6 +45,14 @@ export const apiEnvSchema = z.object({
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().default(1000),
   AI_REQUEST_TIMEOUT: z.coerce.number().default(15000),
   AI_TEMPERATURE: z.coerce.number().default(0.2),
+
+  // Phase 9: Telephony & Voice Receptionist
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
+  VOICE_WEBHOOK_BASE_URL: z.string().url().optional(),
+  VOICE_RECORDING_ENABLED: z.coerce.boolean().default(false),
+  VOICE_DEFAULT_LANGUAGE: z.enum(['ur', 'ps', 'en']).default('ur'),
 });
 
 export const webEnvSchema = z.object({

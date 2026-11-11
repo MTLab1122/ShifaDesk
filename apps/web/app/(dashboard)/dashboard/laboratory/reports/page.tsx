@@ -8,20 +8,142 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MOCK_LAB_REPORTS, MockLabReport } from '@/lib/mock-data';
-import { ArrowLeft, Search, FileText, Printer, CheckCircle } from 'lucide-react';
+import { ApiClient } from '@/lib/api-client';
+import { LaboratoryReport } from '@matabai/shared';
+import {
+  ArrowLeft,
+  Search,
+  Download,
+  Share2,
+  Send,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
+  Copy,
+  Ban,
+} from 'lucide-react';
 
 export default function LabReportsPage() {
-  const [reports] = React.useState<MockLabReport[]>(MOCK_LAB_REPORTS);
+  const [reports, setReports] = React.useState<LaboratoryReport[]>([]);
   const [search, setSearch] = React.useState('');
-  const [selectedReport, setSelectedReport] = React.useState<MockLabReport | null>(null);
+  const [statusFilter, setStatusFilter] = React.useState('ALL');
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
 
-  const filteredReports = reports.filter(
-    (r) =>
-      r.patientName.toLowerCase().includes(search.toLowerCase()) ||
-      r.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      r.testName.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Modals
+  const [tokenModalData, setTokenModalData] = React.useState<{
+    url: string;
+    prefix: string;
+    expiresAt: string;
+  } | null>(null);
+
+  const [revokeModalReport, setRevokeModalReport] = React.useState<LaboratoryReport | null>(null);
+  const [revocationReason, setRevocationReason] = React.useState('');
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await ApiClient.laboratory.listReports({
+        reportStatus: statusFilter === 'ALL' ? undefined : statusFilter,
+        search: search || undefined,
+        limit: 50,
+      });
+      setReports(res.items || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load diagnostic reports archive');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchReports();
+  }, [statusFilter]);
+
+  const showSuccess = (msg: string) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(null), 5000);
+  };
+
+  const handleRelease = async (reportId: string) => {
+    try {
+      setLoading(true);
+      await ApiClient.laboratory.releaseReport(reportId, {
+        sendNotification: true,
+      });
+      showSuccess('Diagnostic report released and patient WhatsApp delivery triggered.');
+      await fetchReports();
+    } catch (err: any) {
+      setError(err.message || 'Failed to release report');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateToken = async (reportId: string) => {
+    try {
+      setLoading(true);
+      const res = await ApiClient.laboratory.createAccessToken(reportId, 168);
+      setTokenModalData({
+        url: res.accessUrl,
+        prefix: res.prefix,
+        expiresAt: new Date(res.expiresAt).toLocaleString(),
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate delivery link');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRevoke = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!revokeModalReport || !revocationReason.trim()) return;
+
+    try {
+      setLoading(true);
+      await ApiClient.laboratory.revokeAccess(revokeModalReport.id, {
+        revocationReason: revocationReason.trim(),
+      });
+      showSuccess('All active public delivery tokens for this report have been revoked.');
+      setRevokeModalReport(null);
+      setRevocationReason('');
+      await fetchReports();
+    } catch (err: any) {
+      setError(err.message || 'Failed to revoke token');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendNotification = async (reportId: string) => {
+    try {
+      setLoading(true);
+      await ApiClient.laboratory.resendNotification(reportId);
+      showSuccess('Delivery notification re-enqueued successfully.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to re-enqueue notification');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'RELEASED':
+        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">Released to Patient</Badge>;
+      case 'APPROVED':
+        return <Badge className="bg-teal-100 text-teal-800 border-teal-300">Pathologist Approved</Badge>;
+      case 'PENDING_REVIEW':
+        return <Badge className="bg-amber-100 text-amber-800 border-amber-300">Pending Review</Badge>;
+      case 'DRAFT':
+        return <Badge variant="secondary">Draft</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -34,160 +156,263 @@ export default function LabReportsPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Diagnostic Reports Archive</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Diagnostic Reports Archive</h1>
             <p className="text-muted-foreground text-sm">
-              Search, verify, and print authenticated pathology diagnostic reports.
+              Search, verify, download, and manage patient delivery tokens for authenticated PDF pathology reports.
             </p>
           </div>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={fetchReports} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
-      {/* Search */}
+      {error && (
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)} className="h-7 px-2">
+            Dismiss
+          </Button>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* Filter and Search */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by order number, patient name, or investigation..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by report #, order #, or patient..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && fetchReports()}
+                className="pl-9 h-10"
+              />
+            </div>
+            <select
+              className="h-10 px-3 rounded-md border border-input bg-background text-sm sm:w-48"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="APPROVED">Approved Only</option>
+              <option value="RELEASED">Released Only</option>
+              <option value="PENDING_REVIEW">Pending Review</option>
+            </select>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Patient Name</TableHead>
-                <TableHead>Investigation</TableHead>
-                <TableHead>Requested Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredReports.map((rep) => (
-                <TableRow key={rep.id}>
-                  <TableCell className="font-mono font-semibold text-xs">{rep.orderNumber}</TableCell>
-                  <TableCell className="font-medium">{rep.patientName}</TableCell>
-                  <TableCell>{rep.testName}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{rep.requestedDate}</TableCell>
-                  <TableCell>
-                    {rep.status === 'Ready' ? (
-                      <Badge variant="clinical" className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                        Ready
-                      </Badge>
-                    ) : rep.status === 'Sample Collected' ? (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        In Analysis
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                        Pending Draw
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs h-8 gap-1.5"
-                      onClick={() => setSelectedReport(rep)}
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      View Report
-                    </Button>
-                  </TableCell>
+          {loading ? (
+            <div className="py-12 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <RefreshCw className="h-4 w-4 animate-spin" /> Loading diagnostic reports...
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              No diagnostic reports found.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Report Reference</TableHead>
+                  <TableHead>Order Ref</TableHead>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Approval / Release</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reports.map((report) => (
+                  <TableRow key={report.id}>
+                    <TableCell className="font-semibold text-slate-900">
+                      {report.reportReference}
+                      <div className="text-[11px] text-muted-foreground font-normal">
+                        {Math.round(report.fileSizeBytes / 1024)} KB • PDF
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {report.order?.orderReference}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-slate-800">{report.order?.patient?.fullName}</div>
+                      <div className="text-xs text-muted-foreground">{report.order?.patient?.phone}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        v{report.version}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {report.approvedBy && <div>Approved by {report.approvedBy.fullName}</div>}
+                      {report.releasedBy && <div>Released by {report.releasedBy.fullName}</div>}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(report.reportStatus)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Download link */}
+                        <a
+                          href={ApiClient.laboratory.getDownloadUrl(report.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-700" title="Download Signed PDF">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
+
+                        {/* Release button if APPROVED */}
+                        {report.reportStatus === 'APPROVED' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleRelease(report.id)}
+                            className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            Release
+                          </Button>
+                        )}
+
+                        {/* Get Delivery Link */}
+                        {(report.reportStatus === 'RELEASED' || report.reportStatus === 'APPROVED') && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleGenerateToken(report.id)}
+                            className="h-8 w-8 text-clinical-600"
+                            title="Generate Secure Patient Link"
+                          >
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* Resend WhatsApp */}
+                        {report.reportStatus === 'RELEASED' && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleResendNotification(report.id)}
+                            className="h-8 w-8 text-teal-600"
+                            title="Resend WhatsApp Delivery Notification"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* Revoke active link */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setRevokeModalReport(report)}
+                          className="h-8 w-8 text-red-600 hover:bg-red-50"
+                          title="Revoke Public Delivery Link"
+                        >
+                          <Ban className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      {/* Report Preview Dialog */}
-      {selectedReport && (
-        <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>
-          <DialogContent className="sm:max-w-[550px]">
-            <DialogHeader>
-              <div className="flex items-center justify-between">
-                <DialogTitle>Laboratory Investigation Report</DialogTitle>
-                <span className="font-mono text-xs text-muted-foreground">{selectedReport.orderNumber}</span>
-              </div>
-              <DialogDescription>
-                Official electronic pathology test certificate.
-              </DialogDescription>
-            </DialogHeader>
+      {/* MODAL: TOKEN SHARE */}
+      <Dialog open={!!tokenModalData} onOpenChange={(open) => !open && setTokenModalData(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Secure Patient Delivery Link</DialogTitle>
+            <DialogDescription>
+              High-entropy 256-bit unguessable link generated for patient verification.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="p-4 border rounded-md space-y-4 bg-muted/20 text-sm">
-              <div className="grid grid-cols-2 gap-4 pb-3 border-b">
-                <div>
-                  <span className="text-xs text-muted-foreground block">Patient Name:</span>
-                  <span className="font-semibold">{selectedReport.patientName}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">Date of Request:</span>
-                  <span className="font-semibold">{selectedReport.requestedDate}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">Investigation:</span>
-                  <span className="font-semibold">{selectedReport.testName}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">Status:</span>
-                  <span className="font-semibold">{selectedReport.status}</span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                  Observed Findings (Digital Specimen Run)
-                </h4>
-                <div className="rounded border bg-white p-3 space-y-2 text-xs">
-                  <div className="flex justify-between border-b pb-1">
-                    <span>Analyte / Parameter</span>
-                    <span className="font-semibold">Value (Ref Range)</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Hemoglobin (Hb)</span>
-                    <span className="font-mono text-foreground font-medium">14.2 g/dL (13.0 - 17.0)</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>WBC Count</span>
-                    <span className="font-mono text-foreground font-medium">6,800 /uL (4,000 - 11,000)</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Platelet Count</span>
-                    <span className="font-mono text-foreground font-medium">245,000 /uL (150,000 - 450,000)</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-[11px] text-muted-foreground pt-1 flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                Verified electronically by MatabAI Pathology Services.
+          <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+              <label className="text-xs font-semibold text-slate-700">Patient Access URL:</label>
+              <div className="flex items-center gap-2">
+                <Input value={tokenModalData?.url || ''} readOnly className="font-mono text-xs bg-white" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (tokenModalData?.url) {
+                      navigator.clipboard.writeText(tokenModalData.url);
+                      showSuccess('Access link copied to clipboard!');
+                    }
+                  }}
+                  className="gap-1 shrink-0"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </Button>
               </div>
             </div>
 
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>• Token Prefix: <span className="font-mono font-semibold">{tokenModalData?.prefix}</span></p>
+              <p>• Expires At: {tokenModalData?.expiresAt}</p>
+              <p>• Verification: Patient must verify their registered phone number or birth year to view the PDF.</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setTokenModalData(null)} className="w-full">
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: REVOKE ACCESS */}
+      <Dialog open={!!revokeModalReport} onOpenChange={(open) => !open && setRevokeModalReport(null)}>
+        <DialogContent className="sm:max-w-[450px]">
+          <form onSubmit={handleRevoke}>
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Revoke Report Access Links</DialogTitle>
+              <DialogDescription>
+                Immediately invalidate all active public access links for report {revokeModalReport?.reportReference}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-2">
+              <label className="text-sm font-medium">Revocation Justification *</label>
+              <Input
+                placeholder="e.g. Corrected results issued, privacy concern..."
+                value={revocationReason}
+                onChange={(e) => setRevocationReason(e.target.value)}
+                required
+              />
+            </div>
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedReport(null)}>
-                Close
+              <Button type="button" variant="outline" onClick={() => setRevokeModalReport(null)}>
+                Cancel
               </Button>
-              <Button
-                onClick={() => {
-                  window.print();
-                }}
-                className="bg-clinical-600 hover:bg-clinical-700 text-white gap-1.5"
-              >
-                <Printer className="h-4 w-4" />
-                Print Certificate
+              <Button type="submit" disabled={loading} variant="destructive">
+                Confirm Revocation
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

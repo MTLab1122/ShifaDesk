@@ -848,6 +848,71 @@ Returns unread count badge for dashboard topbar.
 ### `POST /api/v1/in-app-notifications/:id/read` & `POST /api/v1/in-app-notifications/read-all`
 Marks single or all in-app notifications as read for current user.
 
+---
+
+## 9. Diagnostic Laboratory Management & Secure Report Delivery
+
+### `GET /api/v1/laboratory/categories` & `POST /api/v1/laboratory/categories`
+List and create diagnostic test categories (Hematology, Biochemistry, etc.).
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_REVIEWER`, `LAB_STAFF`, `DOCTOR`.
+- **Create Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`.
+
+### `GET /api/v1/laboratory/tests` & `POST /api/v1/laboratory/tests` & `PATCH /api/v1/laboratory/tests/:id`
+Pathology test directory management with sample types, turnaround minutes, units, reference intervals, and prices.
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_REVIEWER`, `LAB_STAFF`, `DOCTOR`.
+- **Write Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`.
+
+### `GET /api/v1/laboratory/packages` & `POST /api/v1/laboratory/packages`
+Multi-test panels and executive health checkup profiles.
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_REVIEWER`, `LAB_STAFF`, `DOCTOR`.
+
+### `GET /api/v1/laboratory/orders` & `POST /api/v1/laboratory/orders`
+Outpatient lab orders with auto-generated sequential numbers (`LAB-YYYYMM-XXXX`) and immutable price snapshotting.
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_REVIEWER`, `LAB_STAFF`, `DOCTOR`, `RECEPTIONIST`.
+
+### `GET /api/v1/laboratory/orders/:id` & `POST /api/v1/laboratory/orders/:id/cancel`
+Order details with itemized investigations, physical specimen trackers, and cancellation with mandatory reason.
+
+### `GET /api/v1/laboratory/samples` & `PATCH /api/v1/laboratory/samples/:id/status`
+Physical specimen tracking (`SMP-YYYYMM-XXXX`) across 8 lifecycle stages (`PENDING`, `COLLECTED`, `RECEIVED`, `PROCESSING`, `ACCEPTED`, `REJECTED`, `RECOLLECTION_REQUIRED`, `COMPLETED`).
+- Mandatory rejection reason when marked rejected.
+
+### `POST /api/v1/laboratory/order-items/:id/result`
+Technician test result entry (`NUMERIC`, `TEXT`, `QUALITATIVE`, `STRUCTURED`).
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_STAFF`.
+
+### `PATCH /api/v1/laboratory/results/:id/amend`
+Result amendment with mandatory justification recorded in immutable audit ledger.
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_STAFF`.
+
+### `POST /api/v1/laboratory/results/:id/review`
+Two-stage verification with strict separation of duties (technicians cannot self-approve their own results).
+- **Roles:** `CLINIC_ADMIN`, `LAB_MANAGER`, `LAB_REVIEWER`.
+
+### `POST /api/v1/laboratory/reports/generate/:orderId` & `POST /api/v1/laboratory/reports/upload/:orderId`
+Synthetic standard PDF generation or external PDF upload with `%PDF-` magic-byte inspection.
+- Encrypted at rest using AES-256-GCM with SHA-256 integrity checksum.
+
+### `POST /api/v1/laboratory/reports/:id/approve` & `POST /api/v1/laboratory/reports/:id/release`
+Pathologist formal sign-off and report release gating (unapproved reports cannot be released).
+
+### `POST /api/v1/laboratory/reports/:id/access-token` & `POST /api/v1/laboratory/reports/:id/revoke-access`
+Unguessable 256-bit token generation (`crypto.randomBytes(32)`), storing only SHA-256 hashes, with instant one-click revocation.
+
+### `GET /api/v1/laboratory/reports/:id/download`
+Authenticated decryption and streaming of laboratory PDF reports.
+
+### `GET /api/v1/laboratory/analytics`
+Laboratory operational KPIs, turnaround statistics, sample status distribution, and 7-day volume trends.
+
+### `GET /api/v1/patient/laboratory/orders` & `GET /api/v1/patient/laboratory/reports`
+Patient portal lab orders and approved diagnostic reports.
+- **Roles:** `PATIENT`.
+
+### `POST /api/v1/public/reports/access/:token/verify` & `GET /api/v1/public/reports/access/:token/stream`
+Public token verification challenge (patient phone / DOB matching) and decrypted report streaming.
+
+
 
 
 

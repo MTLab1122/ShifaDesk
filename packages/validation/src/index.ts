@@ -16,3 +16,5 @@ export * from './queue.schema.js';
 export * from './whatsapp.schema.js';
 export * from './ai.schema.js';
 export * from './notification.schema.js';
+export * from './voice.schema.js';
+export * from './laboratory.schema.js';

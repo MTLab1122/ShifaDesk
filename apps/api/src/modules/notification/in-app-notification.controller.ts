@@ -18,7 +18,7 @@ import { queryInAppNotificationsSchema } from '@matabai/validation';
 @Controller('in-app-notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class InAppNotificationController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   @Get()
   async listNotifications(
