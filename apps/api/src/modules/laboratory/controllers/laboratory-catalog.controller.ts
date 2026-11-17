@@ -215,3 +215,4 @@ export class LaboratoryCatalogController {
     return this.catalogService.updatePackage(this.getOrgId(user), id, validated, user.id);
   }
 }
+

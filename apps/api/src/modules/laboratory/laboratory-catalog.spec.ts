@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LaboratoryCatalogService } from './services/laboratory-catalog.service';
 import { LaboratoryAuditService } from './services/laboratory-audit.service';
 import { PrismaService } from '../../common/database/prisma.service';
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConflictException, BadRequestException } from '@nestjs/common';
 
 describe('LaboratoryCatalogService', () => {
   let service: LaboratoryCatalogService;
@@ -220,3 +220,4 @@ describe('LaboratoryCatalogService', () => {
     });
   });
 });
+

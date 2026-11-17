@@ -51,6 +51,13 @@ import {
   LaboratoryResult,
   LaboratoryReport,
   LaboratoryAnalytics,
+  Invoice,
+  Payment,
+  Refund,
+  Expense,
+  ExpenseCategory,
+  CashRegisterSession,
+  FinancialAnalytics,
 } from '@matabai/shared';
 import {
   CreateWhatsappIntegrationInput,
@@ -97,6 +104,24 @@ import {
   VerifyReportAccessInput,
   QueryLabReportsInput,
   QueryLabAnalyticsInput,
+  CreateInvoiceInput,
+  CancelInvoiceInput,
+  QueryInvoicesInput,
+  CollectPaymentInput,
+  QueryPaymentsInput,
+  RequestRefundInput,
+  ReviewRefundInput,
+  QueryRefundsInput,
+  CreateExpenseCategoryInput,
+  CreateExpenseInput,
+  UpdateExpenseInput,
+  QueryExpensesInput,
+  OpenCashRegisterInput,
+  CloseCashRegisterInput,
+  ReopenCashRegisterInput,
+  QueryCashSessionsInput,
+  QueryFinancialAnalyticsInput,
+  ManualReconciliationInput,
 } from '@matabai/validation';
 
 const API_BASE_URL =
@@ -1403,5 +1428,174 @@ export class ApiClient {
       if (params.dobYear) q.set('dobYear', String(params.dobYear));
       return `${API_BASE_URL}/public/reports/access/${token}/stream?${q.toString()}`;
     },
+  };
+
+  // Phase 11: Financial Management, Billing, Invoicing & Payments
+  static finance = {
+    // Invoices
+    listInvoices: (params?: Partial<QueryInvoicesInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.patientId) q.set('patientId', params.patientId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.search) q.set('search', params.search);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<Invoice>>(`/finance/invoices?${q.toString()}`);
+    },
+    getInvoice: (id: string) => ApiClient.request<Invoice>(`/finance/invoices/${id}`),
+    createInvoice: (data: CreateInvoiceInput) =>
+      ApiClient.request<Invoice>('/finance/invoices', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    issueInvoice: (id: string) =>
+      ApiClient.request<Invoice>(`/finance/invoices/${id}/issue`, {
+        method: 'POST',
+      }),
+    cancelInvoice: (id: string, data: CancelInvoiceInput) =>
+      ApiClient.request<Invoice>(`/finance/invoices/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getPrintableA4Url: (id: string) => `${API_BASE_URL}/finance/invoices/${id}/print/a4`,
+    getPdfDownloadUrl: (id: string) => `${API_BASE_URL}/finance/invoices/${id}/pdf`,
+
+    // Payments
+    listPayments: (params?: Partial<QueryPaymentsInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.invoiceId) q.set('invoiceId', params.invoiceId);
+      if (params?.patientId) q.set('patientId', params.patientId);
+      if (params?.method) q.set('method', params.method);
+      if (params?.status) q.set('status', params.status);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<Payment>>(`/finance/payments?${q.toString()}`);
+    },
+    getPayment: (id: string) => ApiClient.request<Payment>(`/finance/payments/${id}`),
+    collectPayment: (data: CollectPaymentInput) =>
+      ApiClient.request<Payment>('/finance/payments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getReceiptThermalUrl: (id: string) => `${API_BASE_URL}/finance/payments/${id}/receipt`,
+    getPaymentMethodsStatus: () =>
+      ApiClient.request<{
+        cash: { enabled: boolean; mode: string };
+        bankTransfer: { enabled: boolean; details: any };
+        raast: { isConfigured: boolean; participantCode?: string; merchantIban?: string };
+        card: { isConfigured: boolean; provider: string };
+      }>('/finance/payments/methods/status'),
+
+    // Refunds
+    listRefunds: (params?: Partial<QueryRefundsInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.invoiceId) q.set('invoiceId', params.invoiceId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<Refund>>(`/finance/refunds?${q.toString()}`);
+    },
+    requestRefund: (data: RequestRefundInput) =>
+      ApiClient.request<Refund>('/finance/refunds', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    reviewRefund: (id: string, data: ReviewRefundInput) =>
+      ApiClient.request<Refund>(`/finance/refunds/${id}/review`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    // Expenses
+    listExpenseCategories: () => ApiClient.request<ExpenseCategory[]>('/finance/expense-categories'),
+    createExpenseCategory: (data: CreateExpenseCategoryInput) =>
+      ApiClient.request<ExpenseCategory>('/finance/expense-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listExpenses: (params?: Partial<QueryExpensesInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.categoryId) q.set('categoryId', params.categoryId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<Expense>>(`/finance/expenses?${q.toString()}`);
+    },
+    createExpense: (data: CreateExpenseInput) =>
+      ApiClient.request<Expense>('/finance/expenses', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateExpense: (id: string, data: UpdateExpenseInput) =>
+      ApiClient.request<Expense>(`/finance/expenses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    // Cash Register Sessions
+    getActiveCashSession: (clinicId: string) =>
+      ApiClient.request<CashRegisterSession | null>(`/finance/cash-register/active?clinicId=${clinicId}`),
+    openCashSession: (data: OpenCashRegisterInput) =>
+      ApiClient.request<CashRegisterSession>('/finance/cash-register/open', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    closeCashSession: (id: string, data: CloseCashRegisterInput) =>
+      ApiClient.request<CashRegisterSession>(`/finance/cash-register/${id}/close`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    reopenCashSession: (id: string, data: ReopenCashRegisterInput) =>
+      ApiClient.request<CashRegisterSession>(`/finance/cash-register/${id}/reopen`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listCashSessions: (params?: Partial<QueryCashSessionsInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<CashRegisterSession>>(`/finance/cash-register/sessions?${q.toString()}`);
+    },
+
+    // Analytics & Reconciliation
+    getAnalytics: (params?: QueryFinancialAnalyticsInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<FinancialAnalytics>(`/finance/analytics?${q.toString()}`);
+    },
+    getReconciliation: (params?: QueryFinancialAnalyticsInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<any>(`/finance/reconciliation?${q.toString()}`);
+    },
+    reconcileManually: (data: ManualReconciliationInput) =>
+      ApiClient.request<{ success: boolean; reference: string; status: string }>(
+        '/finance/reconciliation/manual',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+      ),
+
+    // Patient Billing Endpoints
+    getPatientInvoices: () => ApiClient.request<Invoice[]>('/patient/finance/invoices'),
+    getPatientInvoice: (id: string) => ApiClient.request<Invoice>(`/patient/finance/invoices/${id}`),
+    getPatientPayments: () => ApiClient.request<Payment[]>('/patient/finance/payments'),
+    getPatientPdfUrl: (id: string) => `${API_BASE_URL}/patient/finance/invoices/${id}/pdf`,
+    getPatientReceiptUrl: (paymentId: string) => `${API_BASE_URL}/patient/finance/receipts/${paymentId}`,
   };
 }

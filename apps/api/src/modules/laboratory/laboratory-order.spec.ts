@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LaboratoryOrderService } from './services/laboratory-order.service';
 import { LaboratoryAuditService } from './services/laboratory-audit.service';
 import { PrismaService } from '../../common/database/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { LabOrderStatus } from '@matabai/shared';
 
 describe('LaboratoryOrderService', () => {
@@ -113,6 +113,7 @@ describe('LaboratoryOrderService', () => {
           clinicId: mockClinicId,
           patientId: mockPatientId,
           testIds: ['test-cbc', 'test-esr', 'test-ua'],
+          packageIds: [],
         },
         mockActorId,
       );
@@ -152,7 +153,7 @@ describe('LaboratoryOrderService', () => {
       await expect(
         service.createOrder(
           mockOrgId,
-          { clinicId: 'invalid-clinic', patientId: mockPatientId, testIds: ['test-1'] },
+          { clinicId: 'invalid-clinic', patientId: mockPatientId, testIds: ['test-1'], packageIds: [] },
           mockActorId,
         ),
       ).rejects.toThrow(BadRequestException);
@@ -209,3 +210,4 @@ describe('LaboratoryOrderService', () => {
     });
   });
 });
+

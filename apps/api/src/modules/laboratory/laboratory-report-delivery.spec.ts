@@ -193,7 +193,6 @@ describe('LaboratoryReportService & Secure Delivery', () => {
 
     it('should verify patient identity with matching phone number and grant access', async () => {
       const rawToken = 'a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890';
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
       const mockPdfBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF');
       jest.spyOn(storageService, 'readReportFile').mockResolvedValue({
@@ -330,3 +329,4 @@ describe('LaboratoryReportService & Secure Delivery', () => {
     });
   });
 });
+

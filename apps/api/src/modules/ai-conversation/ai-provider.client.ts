@@ -20,7 +20,7 @@ export interface AiCompletionResponse {
 export class AiProviderClient {
   private readonly logger = new Logger(AiProviderClient.name);
 
-  constructor(private readonly configService: AiConfigService) {}
+  constructor(private readonly configService: AiConfigService) { }
 
   /**
    * Execute chat completion with timeouts, retry backoff, and token usage measurement

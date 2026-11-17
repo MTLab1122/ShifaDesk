@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LaboratorySampleService } from './services/laboratory-sample.service';
 import { LaboratoryAuditService } from './services/laboratory-audit.service';
 import { PrismaService } from '../../common/database/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { LabSampleStatus, LabOrderStatus } from '@matabai/shared';
 
 describe('LaboratorySampleService', () => {
@@ -129,3 +129,4 @@ describe('LaboratorySampleService', () => {
     });
   });
 });
+

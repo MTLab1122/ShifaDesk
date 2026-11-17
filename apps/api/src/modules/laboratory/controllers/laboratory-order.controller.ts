@@ -126,3 +126,4 @@ export class LaboratoryOrderController {
     return this.orderService.cancelOrder(this.getOrgId(user), id, validated, user.id);
   }
 }
+

@@ -1381,6 +1381,342 @@ CREATE POLICY "laboratory_audit_logs_write" ON laboratory_audit_logs
     )
   );
 
+-- ==============================================================================
+-- Phase 11: Financial Management, Invoicing, Billing & Payments RLS Policies
+-- ==============================================================================
+
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_allocations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE refunds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_adjustments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expense_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_register_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_register_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_webhook_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- 1. Invoices Policies
+-- Staff can read invoices within their organization; patients can read their own invoices
+CREATE POLICY "invoices_select" ON invoices
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = invoices.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = invoices.patient_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "invoices_write" ON invoices
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = invoices.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 2. Invoice Items Policies
+CREATE POLICY "invoice_items_select" ON invoice_items
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM invoices inv
+      JOIN organization_memberships om ON inv.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE inv.id = invoice_items.invoice_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM invoices inv
+      JOIN patients p ON inv.patient_id = p.id
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE inv.id = invoice_items.invoice_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "invoice_items_write" ON invoice_items
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM invoices inv
+      JOIN organization_memberships om ON inv.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE inv.id = invoice_items.invoice_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 3. Payments Policies
+CREATE POLICY "payments_select" ON payments
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = payments.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = payments.patient_id
+        AND up.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "payments_write" ON payments
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = payments.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 4. Payment Allocations Policies
+CREATE POLICY "payment_allocations_select" ON payment_allocations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM invoices inv
+      JOIN organization_memberships om ON inv.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE inv.id = payment_allocations.invoice_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "payment_allocations_write" ON payment_allocations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM invoices inv
+      JOIN organization_memberships om ON inv.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE inv.id = payment_allocations.invoice_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 5. Refunds Policies
+CREATE POLICY "refunds_select" ON refunds
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = refunds.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "refunds_write" ON refunds
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = refunds.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 6. Financial Adjustments Policies
+CREATE POLICY "financial_adjustments_select" ON financial_adjustments
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = financial_adjustments.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "financial_adjustments_write" ON financial_adjustments
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = financial_adjustments.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 7. Expense Categories & Expenses Policies
+CREATE POLICY "expense_categories_select" ON expense_categories
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = expense_categories.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "expense_categories_write" ON expense_categories
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = expense_categories.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "expenses_select" ON expenses
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = expenses.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "expenses_write" ON expenses
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = expenses.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 8. Cash Register Sessions & Transactions Policies
+CREATE POLICY "cash_register_sessions_select" ON cash_register_sessions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = cash_register_sessions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "cash_register_sessions_write" ON cash_register_sessions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = cash_register_sessions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "cash_register_transactions_select" ON cash_register_transactions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM cash_register_sessions crs
+      JOIN organization_memberships om ON crs.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE crs.id = cash_register_transactions.session_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "cash_register_transactions_write" ON cash_register_transactions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM cash_register_sessions crs
+      JOIN organization_memberships om ON crs.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE crs.id = cash_register_transactions.session_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 9. Payment Webhooks Policies
+CREATE POLICY "payment_webhook_events_all" ON payment_webhook_events
+  FOR ALL
+  USING (true);
+
+-- 10. Financial Audit Logs Policies
+CREATE POLICY "financial_audit_logs_select" ON financial_audit_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = financial_audit_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "financial_audit_logs_write" ON financial_audit_logs
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = financial_audit_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+
 
 
 

@@ -69,6 +69,14 @@ model Organization {
   laboratoryReports         LaboratoryReport[]
   laboratoryReportAccessTokens LaboratoryReportAccessToken[]
   laboratoryAuditLogs       LaboratoryAuditLog[]
+  invoices                  Invoice[]
+  payments                  Payment[]
+  refunds                   Refund[]
+  financialAdjustments      FinancialAdjustment[]
+  expenseCategories         ExpenseCategory[]
+  expenses                  Expense[]
+  cashRegisterSessions      CashRegisterSession[]
+  financialAuditLogs        FinancialAuditLog[]
 
   @@index([slug])
   @@index([status])
@@ -131,6 +139,12 @@ model Clinic {
   laboratoryReports          LaboratoryReport[]
   laboratoryReportAccessTokens LaboratoryReportAccessToken[]
   laboratoryAuditLogs        LaboratoryAuditLog[]
+  invoices                   Invoice[]
+  payments                   Payment[]
+  refunds                    Refund[]
+  financialAdjustments       FinancialAdjustment[]
+  expenses                   Expense[]
+  cashRegisterSessions       CashRegisterSession[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -166,6 +180,10 @@ model UserProfile {
   releasedLaboratoryReports LaboratoryReport[] @relation("ReleasedReports")
   collectedLaboratorySamples LaboratorySample[] @relation("CollectedSamples")
   receivedLaboratorySamples LaboratorySample[] @relation("ReceivedSamples")
+  createdInvoices           Invoice[] @relation("InvoiceCreatedBy")
+  collectedPayments         Payment[] @relation("PaymentCollectedBy")
+  openedCashSessions        CashRegisterSession[] @relation("CashSessionOpenedBy")
+  closedCashSessions        CashRegisterSession[] @relation("CashSessionClosedBy")
 
   @@index([authUserId])
   @@index([email])
@@ -350,6 +368,8 @@ model Patient {
   voiceCallSessions VoiceCallSession[]
   laboratoryOrders  LaboratoryOrder[]
   laboratoryReportAccessTokens LaboratoryReportAccessToken[]
+  invoices          Invoice[]
+  payments          Payment[]
 
   @@unique([organizationId, patientNumber])
   @@index([organizationId])
@@ -443,6 +463,7 @@ model Appointment {
   statusHistory AppointmentStatusHistory[]
   queueTokens   QueueToken[]
   laboratoryOrders LaboratoryOrder[]
+  invoices      Invoice[]
 
   @@unique([organizationId, appointmentNumber])
   @@index([organizationId])
@@ -1422,6 +1443,7 @@ model LaboratoryOrder {
   items          LaboratoryOrderItem[]
   samples        LaboratorySample[]
   reports        LaboratoryReport[]
+  invoices       Invoice[]
 
   @@index([organizationId])
   @@index([clinicId])
@@ -1647,5 +1669,344 @@ model LaboratoryAuditLog {
   @@index([createdAt])
   @@map("laboratory_audit_logs")
 }
+
+// ==========================================
+// Phase 11: Financial Management, Billing, Invoicing & Payments
+// ==========================================
+
+/// Outpatient, consultation, and diagnostic patient invoices
+model Invoice {
+  id                 String    @id @default(uuid())
+  organizationId     String    @map("organization_id")
+  clinicId           String    @map("clinic_id")
+  patientId          String    @map("patient_id")
+  appointmentId      String?   @map("appointment_id")
+  laboratoryOrderId  String?   @map("laboratory_order_id")
+  invoiceReference   String    @unique @map("invoice_reference") // INV-YYYYMM-XXXX
+  relatedEntityType  String?   @map("related_entity_type") // APPOINTMENT, LABORATORY_ORDER, CONSULTATION, GENERAL
+  relatedEntityId    String?   @map("related_entity_id")
+  subtotalMinor      Int       @default(0) @map("subtotal_minor")
+  discountMinor      Int       @default(0) @map("discount_minor")
+  discountType       String?   @map("discount_type") // FIXED, PERCENTAGE
+  discountReason     String?   @map("discount_reason")
+  taxMinor           Int       @default(0) @map("tax_minor")
+  taxRatePercent     Float     @default(0) @map("tax_rate_percent")
+  totalMinor         Int       @default(0) @map("total_minor")
+  paidMinor          Int       @default(0) @map("paid_minor")
+  outstandingMinor   Int       @default(0) @map("outstanding_minor")
+  currency           String    @default("PKR")
+  status             String    @default("DRAFT") @map("status") // DRAFT, ISSUED, PARTIALLY_PAID, PAID, OVERDUE, CANCELLED, VOIDED
+  issuedAt           DateTime? @map("issued_at")
+  dueAt              DateTime? @map("due_at")
+  createdById        String?   @map("created_by_id")
+  cancellationReason String?   @map("cancellation_reason")
+  notes              String?
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic             Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient            Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment        Appointment?           @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  laboratoryOrder    LaboratoryOrder?       @relation(fields: [laboratoryOrderId], references: [id], onDelete: SetNull)
+  createdBy          UserProfile?           @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items              InvoiceItem[]
+  payments           Payment[]
+  allocations        PaymentAllocation[]
+  refunds            Refund[]
+  adjustments        FinancialAdjustment[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([status])
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+/// Line items within an invoice with immutable price snapshotting
+model InvoiceItem {
+  id                  String   @id @default(uuid())
+  invoiceId           String   @map("invoice_id")
+  itemType            String   @map("item_type") // CONSULTATION, LAB_TEST, LAB_PACKAGE, PROCEDURE, MEDICATION, SERVICE, CUSTOM
+  itemReference       String?  @map("item_reference")
+  descriptionSnapshot String   @map("description_snapshot")
+  quantity            Int      @default(1)
+  unitPriceMinor      Int      @map("unit_price_minor")
+  discountMinor       Int      @default(0) @map("discount_minor")
+  taxMinor            Int      @default(0) @map("tax_minor")
+  totalMinor          Int      @map("total_minor")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([itemType])
+  @@map("invoice_items")
+}
+
+/// Patient payments and collections against invoices
+model Payment {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  clinicId              String    @map("clinic_id")
+  invoiceId             String    @map("invoice_id")
+  patientId             String?   @map("patient_id")
+  paymentReference      String    @unique @map("payment_reference") // PAY-YYYYMM-XXXX
+  method                String    @map("method") // CASH, BANK_TRANSFER, CARD, RAAST, OTHER
+  provider              String    @default("CASH") @map("provider") // CASH, MANUAL_BANK, RAAST_SBP, PAYMOB, SAFEPAY, STRIPE
+  providerTransactionId String?   @map("provider_transaction_id")
+  amountMinor           Int       @map("amount_minor")
+  currency              String    @default("PKR")
+  status                String    @default("COMPLETED") @map("status") // PENDING, COMPLETED, FAILED, REVERSED, REFUNDED
+  idempotencyKey        String?   @unique @map("idempotency_key")
+  collectedById         String?   @map("collected_by_id")
+  confirmedAt           DateTime? @map("confirmed_at")
+  bankName              String?   @map("bank_name")
+  bankReference         String?   @map("bank_reference")
+  cardLast4             String?   @map("card_last4")
+  cardBrand             String?   @map("card_brand")
+  notes                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  invoice      Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  patient      Patient?            @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  collectedBy  UserProfile?        @relation("PaymentCollectedBy", fields: [collectedById], references: [id], onDelete: SetNull)
+  allocations  PaymentAllocation[]
+  refunds      Refund[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([invoiceId])
+  @@index([patientId])
+  @@index([status])
+  @@index([method])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+/// Allocation ledger mapping payments to specific invoices
+model PaymentAllocation {
+  id             String   @id @default(uuid())
+  paymentId      String   @map("payment_id")
+  invoiceId      String   @map("invoice_id")
+  allocatedMinor Int      @map("allocated_minor")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
+}
+
+/// Financial refund records with approval lifecycle
+model Refund {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  clinicId         String    @map("clinic_id")
+  paymentId        String    @map("payment_id")
+  invoiceId        String    @map("invoice_id")
+  refundReference  String    @unique @map("refund_reference") // REF-YYYYMM-XXXX
+  amountMinor      Int       @map("amount_minor")
+  currency         String    @default("PKR")
+  reason           String
+  status           String    @default("PENDING_APPROVAL") @map("status") // REQUESTED, PENDING_APPROVAL, APPROVED, PROCESSING, COMPLETED, FAILED, REJECTED
+  requestedById    String    @map("requested_by_id")
+  approvedById     String?   @map("approved_by_id")
+  rejectionReason  String?   @map("rejection_reason")
+  providerRefundId String?   @map("provider_refund_id")
+  completedAt      DateTime? @map("completed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  payment      Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@index([status])
+  @@map("refunds")
+}
+
+/// Adjustments, write-offs, and credit notes against invoices
+model FinancialAdjustment {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String   @map("clinic_id")
+  invoiceId      String   @map("invoice_id")
+  adjustmentType String   @map("adjustment_type") // CREDIT_NOTE, WRITE_OFF, MANUAL_CORRECTION, DISCOUNT_ADJUSTMENT
+  amountMinor    Int      @map("amount_minor")
+  reason         String
+  approvedById   String?  @map("approved_by_id")
+  createdById    String   @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([invoiceId])
+  @@map("financial_adjustments")
+}
+
+/// Categories for operating expenses
+model ExpenseCategory {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String
+  code           String
+  description    String?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenses     Expense[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("expense_categories")
+}
+
+/// Operational clinic expenses
+model Expense {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  clinicId         String    @map("clinic_id")
+  categoryId       String    @map("category_id")
+  expenseReference String    @unique @map("expense_reference") // EXP-YYYYMM-XXXX
+  description      String
+  amountMinor      Int       @map("amount_minor")
+  currency         String    @default("PKR")
+  paymentMethod    String    @default("CASH") @map("payment_method") // CASH, BANK_TRANSFER, CARD, CHEQUE, OTHER
+  vendor           String?
+  referenceNumber  String?   @map("reference_number")
+  expenseDate      DateTime  @map("expense_date")
+  status           String    @default("APPROVED") @map("status") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, PAID
+  createdById      String    @map("created_by_id")
+  approvedById     String?   @map("approved_by_id")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  category     ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+/// Physical cash register sessions and daily financial closing
+model CashRegisterSession {
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  clinicId             String    @map("clinic_id")
+  sessionNumber        String    @unique @map("session_number") // CRS-YYYYMM-XXXX
+  openedById           String    @map("opened_by_id")
+  closedById           String?   @map("closed_by_id")
+  openingBalanceMinor  Int       @default(0) @map("opening_balance_minor")
+  expectedClosingMinor Int       @default(0) @map("expected_closing_minor")
+  actualClosingMinor   Int?      @map("actual_closing_minor")
+  discrepancyMinor     Int?      @map("discrepancy_minor")
+  discrepancyReason    String?   @map("discrepancy_reason")
+  status               String    @default("OPEN") @map("status") // OPEN, CLOSED, REOPENED_AUDIT
+  openedAt             DateTime  @default(now()) @map("opened_at")
+  closedAt             DateTime? @map("closed_at")
+  reopenedAt           DateTime? @map("reopened_at")
+  reopenedById         String?   @map("reopened_by_id")
+  reopenReason         String?   @map("reopen_reason")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  organization Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  openedBy     UserProfile                 @relation("CashSessionOpenedBy", fields: [openedById], references: [id], onDelete: Cascade)
+  closedBy     UserProfile?                @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  transactions CashRegisterTransaction[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([status])
+  @@index([openedAt])
+  @@map("cash_register_sessions")
+}
+
+/// Cash movements associated with a cash register session
+model CashRegisterTransaction {
+  id              String   @id @default(uuid())
+  sessionId       String   @map("session_id")
+  transactionType String   @map("transaction_type") // CASH_PAYMENT, CASH_REFUND, CASH_EXPENSE, CASH_DEPOSIT, CASH_WITHDRAWAL, MANUAL_ADJUSTMENT
+  referenceType   String?  @map("reference_type") // PAYMENT, REFUND, EXPENSE, MANUAL
+  referenceId     String?  @map("reference_id")
+  amountMinor     Int      @map("amount_minor") // positive for cash in, negative for cash out
+  recordedById    String   @map("recorded_by_id")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  session CashRegisterSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([transactionType])
+  @@index([createdAt])
+  @@map("cash_register_transactions")
+}
+
+/// Incoming webhook logs for external payment providers
+model PaymentWebhookEvent {
+  id              String    @id @default(uuid())
+  provider        String
+  providerEventId String    @map("provider_event_id")
+  eventType       String    @map("event_type")
+  payloadMetadata Json      @default("{}") @map("payload_metadata")
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@unique([provider, providerEventId])
+  @@index([provider])
+  @@index([createdAt])
+  @@map("payment_webhook_events")
+}
+
+/// Immutable audit ledger for financial operations and mutations
+model FinancialAuditLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  actorId        String   @map("actor_id")
+  entityType     String   @map("entity_type") // INVOICE, PAYMENT, REFUND, EXPENSE, CASH_REGISTER, ADJUSTMENT
+  entityId       String   @map("entity_id")
+  action         String   // CREATED, ISSUED, PAID, REFUNDED, CANCELLED, VOIDED, CLOSED, REOPENED, AMENDED
+  previousValues Json?    @default("{}") @map("previous_values")
+  newValues      Json?    @default("{}") @map("new_values")
+  reason         String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("financial_audit_logs")
+}
+
 
 

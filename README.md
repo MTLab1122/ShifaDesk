@@ -156,6 +156,8 @@ See [AGENT_WORKFLOW.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(Shifa
 - [ARCHITECTURE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/ARCHITECTURE.md) — System Architecture & Module Boundaries
 - [DATABASE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/DATABASE.md) — PostgreSQL / Supabase Strategy & Migrations
 - [API.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/API.md) — REST API Conventions & Error Contracts
+- [FINANCIAL_MANAGEMENT.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/finance/FINANCIAL_MANAGEMENT.md) — Billing, Invoicing, Multi-Tender Payments & Cash Drawers
+- [DIAGNOSTIC_LABORATORY.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/laboratory/DIAGNOSTIC_LABORATORY.md) — Pathology Specimen & Report Delivery
 - [SECURITY.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/SECURITY.md) — Security & Compliance Standards
 - [CONTRIBUTING.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/CONTRIBUTING.md) — Engineering Standards & Git Conventions
 - [AGENT_WORKFLOW.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/AGENT_WORKFLOW.md) — Parallel Development Strategy

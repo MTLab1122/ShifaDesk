@@ -18,3 +18,4 @@ export * from './ai.schema.js';
 export * from './notification.schema.js';
 export * from './voice.schema.js';
 export * from './laboratory.schema.js';
+export * from './finance.schema.js';

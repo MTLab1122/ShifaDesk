@@ -30,6 +30,17 @@ import {
   LabResultType,
   ReviewDecision,
   LabAccessStatus,
+  InvoiceStatus,
+  PaymentStatus,
+  PaymentMethod,
+  PaymentProvider,
+  RefundStatus,
+  InvoiceItemType,
+  ExpenseStatus,
+  CashSessionStatus,
+  CashTransactionType,
+  FinancialAdjustmentType,
+  ReconciliationStatus,
 } from './enums.js';
 
 export interface Organization {
@@ -1079,6 +1090,518 @@ export interface LaboratoryAnalytics {
   reportsByStatus: Record<string, number>;
   volumeByDay: Array<{ date: string; orders: number; completed: number }>;
 }
+
+// ==========================================
+// Phase 11: Financial Management Entities
+// ==========================================
+
+export interface InvoiceItem {
+  id: string;
+  invoiceId: string;
+  itemType: InvoiceItemType | string;
+  itemReference?: string | null;
+  descriptionSnapshot: string;
+  quantity: number;
+  unitPriceMinor: number;
+  discountMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  createdAt: string;
+}
+
+export interface Invoice {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  appointmentId?: string | null;
+  laboratoryOrderId?: string | null;
+  invoiceReference: string;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
+  subtotalMinor: number;
+  discountMinor: number;
+  discountType?: string | null;
+  discountReason?: string | null;
+  taxMinor: number;
+  taxRatePercent: number;
+  totalMinor: number;
+  paidMinor: number;
+  outstandingMinor: number;
+  currency: string;
+  status: InvoiceStatus | string;
+  issuedAt?: string | null;
+  dueAt?: string | null;
+  createdById?: string | null;
+  cancellationReason?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient;
+  clinic?: Clinic;
+  appointment?: Appointment;
+  laboratoryOrder?: LaboratoryOrder;
+  createdBy?: UserProfile | null;
+  items?: InvoiceItem[];
+  payments?: Payment[];
+  allocations?: PaymentAllocation[];
+  refunds?: Refund[];
+  adjustments?: FinancialAdjustment[];
+}
+
+export interface Payment {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  invoiceId: string;
+  patientId?: string | null;
+  paymentReference: string;
+  method: PaymentMethod | string;
+  provider: PaymentProvider | string;
+  providerTransactionId?: string | null;
+  amountMinor: number;
+  currency: string;
+  status: PaymentStatus | string;
+  idempotencyKey?: string | null;
+  collectedById?: string | null;
+  confirmedAt?: string | null;
+  bankName?: string | null;
+  bankReference?: string | null;
+  cardLast4?: string | null;
+  cardBrand?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  invoice?: Invoice;
+  clinic?: Clinic;
+  patient?: Patient;
+  collectedBy?: UserProfile | null;
+  refunds?: Refund[];
+}
+
+export interface PaymentAllocation {
+  id: string;
+  paymentId: string;
+  invoiceId: string;
+  allocatedMinor: number;
+  createdAt: string;
+}
+
+export interface Refund {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  paymentId: string;
+  invoiceId: string;
+  refundReference: string;
+  amountMinor: number;
+  currency: string;
+  reason: string;
+  status: RefundStatus | string;
+  requestedById: string;
+  approvedById?: string | null;
+  rejectionReason?: string | null;
+  providerRefundId?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  payment?: Payment;
+  invoice?: Invoice;
+}
+
+export interface FinancialAdjustment {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  invoiceId: string;
+  adjustmentType: FinancialAdjustmentType | string;
+  amountMinor: number;
+  reason: string;
+  approvedById?: string | null;
+  createdById: string;
+  createdAt: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  organizationId: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Expense {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  categoryId: string;
+  expenseReference: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  paymentMethod: string;
+  vendor?: string | null;
+  referenceNumber?: string | null;
+  expenseDate: string;
+  status: ExpenseStatus | string;
+  createdById: string;
+  approvedById?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  category?: ExpenseCategory;
+}
+
+export interface CashRegisterSession {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  sessionNumber: string;
+  openedById: string;
+  closedById?: string | null;
+  openingBalanceMinor: number;
+  expectedClosingMinor: number;
+  actualClosingMinor?: number | null;
+  discrepancyMinor?: number | null;
+  discrepancyReason?: string | null;
+  status: CashSessionStatus | string;
+  openedAt: string;
+  closedAt?: string | null;
+  reopenedAt?: string | null;
+  reopenedById?: string | null;
+  reopenReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  openedBy?: UserProfile;
+  closedBy?: UserProfile | null;
+  transactions?: CashRegisterTransaction[];
+}
+
+export interface CashRegisterTransaction {
+  id: string;
+  sessionId: string;
+  transactionType: CashTransactionType | string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  amountMinor: number;
+  recordedById: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface FinancialAnalytics {
+  todayRevenueMinor: number;
+  monthlyRevenueMinor: number;
+  totalCollectedMinor: number;
+  outstandingReceivablesMinor: number;
+  pendingInvoicesCount: number;
+  refundedAmountMinor: number;
+  recordedExpensesMinor: number;
+  netOperatingBalanceMinor: number;
+  revenueByPaymentMethod: Record<string, number>;
+  revenueByServiceCategory: Record<string, number>;
+  revenueByClinic: Record<string, number>;
+  timeline: Array<{ date: string; revenueMinor: number; expensesMinor: number; collectionsMinor: number }>;
+}
+
+export interface ReconciliationItem {
+  id: string;
+  type: 'PAYMENT' | 'BANK_RECORD' | 'GATEWAY_EVENT';
+  reference: string;
+  amountMinor: number;
+  method: string;
+  date: string;
+  status: ReconciliationStatus | string;
+  matchedWithReference?: string | null;
+  notes?: string | null;
+}
+
+
+
+
+
+
+
+
+export interface LaboratoryOrder {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  orderingDoctorId?: string | null;
+  appointmentId?: string | null;
+  orderReference: string;
+  orderStatus: LabOrderStatus | string;
+  totalAmount: number;
+  currency: string;
+  notes?: string | null;
+  cancellationReason?: string | null;
+  createdById?: string | null;
+  expectedCompletionDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient;
+  orderingDoctor?: Doctor | null;
+  appointment?: Appointment | null;
+  clinic?: Clinic;
+  items?: LaboratoryOrderItem[];
+  samples?: LaboratorySample[];
+  reports?: LaboratoryReport[];
+}
+
+export interface LaboratorySample {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  orderId: string;
+  sampleReference: string;
+  sampleType: string;
+  sampleStatus: LabSampleStatus | string;
+  collectionInstructions?: string | null;
+  collectedById?: string | null;
+  collectedAt?: string | null;
+  receivedById?: string | null;
+  receivedAt?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order?: LaboratoryOrder;
+  collectedBy?: UserProfile | null;
+  receivedBy?: UserProfile | null;
+}
+
+export interface LaboratoryResultReview {
+  id: string;
+  resultId: string;
+  reviewerId: string;
+  decision: ReviewDecision | string;
+  comments?: string | null;
+  reviewedAt: string;
+  reviewer?: UserProfile;
+}
+
+export interface LaboratoryResult {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  orderItemId: string;
+  resultType: LabResultType | string;
+  resultValue: string;
+  unit?: string | null;
+  referenceRange?: string | null;
+  resultNotes?: string | null;
+  resultStatus: LabResultStatus | string;
+  enteredById: string;
+  enteredAt: string;
+  amendedReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  enteredBy?: UserProfile;
+  orderItem?: LaboratoryOrderItem;
+  reviews?: LaboratoryResultReview[];
+}
+
+export interface LaboratoryReport {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  orderId: string;
+  reportReference: string;
+  version: number;
+  storagePath: string;
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  reportStatus: LabReportStatus | string;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  releasedById?: string | null;
+  releasedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order?: LaboratoryOrder;
+  approvedBy?: UserProfile | null;
+  releasedBy?: UserProfile | null;
+  accessTokens?: LaboratoryReportAccessToken[];
+}
+
+export interface LaboratoryReportAccessToken {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  reportId: string;
+  patientId: string;
+  tokenHash: string;
+  tokenPrefix: string;
+  expiresAt: string;
+  revokedAt?: string | null;
+  accessCount: number;
+  maxAccessCount: number;
+  createdAt: string;
+  report?: LaboratoryReport;
+  patient?: Patient;
+}
+
+export interface LaboratoryReportAccessLog {
+  id: string;
+  reportId: string;
+  patientId?: string | null;
+  tokenId?: string | null;
+  accessStatus: LabAccessStatus | string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, unknown> | null;
+  accessedAt: string;
+}
+
+export interface LaboratoryAuditLog {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  actorId: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  previousValues?: Record<string, unknown> | null;
+  newValues?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface LaboratoryAnalytics {
+  totalOrders: number;
+  ordersToday: number;
+  pendingSamples: number;
+  processingSamples: number;
+  resultsAwaitingReview: number;
+  reportsApproved: number;
+  reportsDelivered: number;
+  averageTurnaroundMinutes: number;
+  ordersByStatus: Record<string, number>;
+  samplesByStatus: Record<string, number>;
+  reportsByStatus: Record<string, number>;
+  volumeByDay: Array<{ date: string; orders: number; completed: number }>;
+}
+
+
+
+
+
+
+
+export interface FinancialAdjustment {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  invoiceId: string;
+  adjustmentType: FinancialAdjustmentType | string;
+  amountMinor: number;
+  reason: string;
+  approvedById?: string | null;
+  createdById: string;
+  createdAt: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  organizationId: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Expense {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  categoryId: string;
+  expenseReference: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  paymentMethod: string;
+  vendor?: string | null;
+  referenceNumber?: string | null;
+  expenseDate: string;
+  status: ExpenseStatus | string;
+  createdById: string;
+  approvedById?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  category?: ExpenseCategory;
+}
+
+export interface CashRegisterSession {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  sessionNumber: string;
+  openedById: string;
+  closedById?: string | null;
+  openingBalanceMinor: number;
+  expectedClosingMinor: number;
+  actualClosingMinor?: number | null;
+  discrepancyMinor?: number | null;
+  discrepancyReason?: string | null;
+  status: CashSessionStatus | string;
+  openedAt: string;
+  closedAt?: string | null;
+  reopenedAt?: string | null;
+  reopenedById?: string | null;
+  reopenReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  openedBy?: UserProfile;
+  closedBy?: UserProfile | null;
+  transactions?: CashRegisterTransaction[];
+}
+
+export interface CashRegisterTransaction {
+  id: string;
+  sessionId: string;
+  transactionType: CashTransactionType | string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  amountMinor: number;
+  recordedById: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface FinancialAnalytics {
+  todayRevenueMinor: number;
+  monthlyRevenueMinor: number;
+  totalCollectedMinor: number;
+  outstandingReceivablesMinor: number;
+  pendingInvoicesCount: number;
+  refundedAmountMinor: number;
+  recordedExpensesMinor: number;
+  netOperatingBalanceMinor: number;
+  revenueByPaymentMethod: Record<string, number>;
+  revenueByServiceCategory: Record<string, number>;
+  revenueByClinic: Record<string, number>;
+  timeline: Array<{ date: string; revenueMinor: number; expensesMinor: number; collectionsMinor: number }>;
+}
+
+export interface ReconciliationItem {
+  id: string;
+  type: 'PAYMENT' | 'BANK_RECORD' | 'GATEWAY_EVENT';
+  reference: string;
+  amountMinor: number;
+  method: string;
+  date: string;
+  status: ReconciliationStatus | string;
+  matchedWithReference?: string | null;
+  notes?: string | null;
+}
+
 
 
 

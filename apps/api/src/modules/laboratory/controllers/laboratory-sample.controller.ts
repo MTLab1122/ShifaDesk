@@ -106,3 +106,4 @@ export class LaboratorySampleController {
     return this.sampleService.updateSampleStatus(this.getOrgId(user), id, validated, user.id);
   }
 }
+

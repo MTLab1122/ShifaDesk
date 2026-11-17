@@ -2,7 +2,7 @@
 
 Founder: **Muhammad Talha**  
 Project: **MatabAI (ShifaDesk)**  
-Current Status: **Phases 0 through 10 Verified & Complete**
+Current Status: **Phases 0 through 11 Verified & Complete**
 
 ---
 
@@ -21,7 +21,8 @@ Current Status: **Phases 0 through 10 Verified & Complete**
 | **8** | **Notification Orchestration, Automated Reminders & Workflow Engine** | **VERIFIED** | Centralized notification engine: WhatsApp (Meta Cloud API), Persistent In-App dashboard alerts, real Email & SMS adapters (unconfigured detection without simulated delivery), appointment reminders (-24h, -2h), invalidation on reschedule/cancellation, quiet hours enforcement, opt-in/opt-out keyword handling, atomic worker claiming, dead-letter state, and interactive notification dashboard. All 25 test suites (167 tests) passing (100%). Committed (`578bbfe`). |
 | **9** | **AI Voice Receptionist, Telephony & Intelligent IVR System** | **VERIFIED** | Multi-language inbound telephony (Urdu, Pashto, English), Keypad DTMF IVR (1: Urdu, 2: Pashto, 3: English, 0: Receptionist), Twilio Voice adapter (TwiML generation, HMAC-SHA1 signature verification), strict medical safety (100% refusal of medical advice, immediate Rescue 1122 escalation), conversational appointment booking & queue token lookup, TwiML `<Dial>` receptionist transfer with staff alerts, Pakistan PTA regulatory trunking architecture, browser-based voice simulator playground, and voice dashboard. All 29 test suites (189 tests) passing (100%). Committed (`661074e`). |
 | **10** | **Diagnostic Laboratory Management & Secure Report Delivery** | **VERIFIED** | Outpatient pathology test directory, packages/panels, physical specimen tracking (`SMP-YYYYMM-XXXX`) through 8 lifecycle stages, lab orders (`LAB-YYYYMM-XXXX`) with immutable price snapshotting, two-stage result review with strict separation of duties, amendment ledger, AES-256-GCM encrypted PDF report storage (%PDF- magic byte check), 256-bit unguessable tokens with phone verification, WhatsApp & in-app notifications, full laboratory operations dashboard, tests catalog, reports archive, and public access portal. All 34 test suites (218 tests) passing (100%). |
-| **11** | **E-Prescriptions, Pharmacy & Medication Dispensation** | ⏸️ NEXT | Founder sign-off of Phase 10 deliverables. |
+| **11** | **Financial Management, Billing, Invoicing & Payment Processing** | **VERIFIED** | Outpatient & diagnostic invoices (`INV-YYYYMM-XXXX`), multi-tender collections (`PAY-YYYYMM-XXXX`), cash register drawer sessions (`CRS-YYYYMM-XXXX`) with mandatory physical discrepancy explanation, separation of duties refunds (`REF-YYYYMM-XXXX`), operating expenses (`EXP-YYYYMM-XXXX`), multi-source reconciliation, A4/80mm thermal receipts, Phase 8 notifications, and patient billing portal. All 40 test suites (249 tests) passing (100%). |
+| **12** | **E-Prescriptions, Pharmacy & Medication Dispensation** | ⏸️ NEXT | Founder sign-off of Phase 11 deliverables. |
 
 ---
 
@@ -430,3 +431,59 @@ Current Status: **Phases 0 through 10 Verified & Complete**
   - Live clock and waiting stats
   - Auto-refresh every 5s with live pulse
   - Strict privacy: zero patient names, phones, or private data displayed
+
+---
+
+## 📋 Phase 11 Execution Checklist (Complete & Verified)
+
+### Database Schema & Security
+- [x] 12 Prisma models created: `Invoice`, `InvoiceItem`, `Payment`, `PaymentAllocation`, `Refund`, `FinancialAdjustment`, `ExpenseCategory`, `Expense`, `CashRegisterSession`, `CashRegisterTransaction`, `PaymentWebhookEvent`, `FinancialAuditLog`
+- [x] Wired back-relations to `Organization`, `Clinic`, `UserProfile`, `Patient`, `Appointment`, and `LaboratoryOrder`
+- [x] Implemented multi-tenant Row Level Security (RLS) policies for all 12 tables in `infrastructure/database/rls-policies.sql`
+- [x] Generated Prisma Client v6.19.3 (`pnpm run db:generate`)
+
+### Shared Packages & Validation
+- [x] `@matabai/shared`: Added role `ACCOUNTANT`, permissions (`FINANCE_READ`, `FINANCE_WRITE`, `FINANCE_MANAGE`, `FINANCE_REFUND`, `FINANCE_EXPENSE`, `FINANCE_CLOSE`), updated `ROLE_PERMISSIONS` matrix, enums (`InvoiceStatus`, `PaymentStatus`, `PaymentMethod`, `PaymentProvider`, `RefundStatus`, `InvoiceItemType`, `ExpenseStatus`, `CashSessionStatus`, `CashTransactionType`, `FinancialAdjustmentType`), and TypeScript entity interfaces
+- [x] `@matabai/validation`: Zod schemas for invoice creation, payments, refunds, expenses, cash register shifts, and manual reconciliation with strict integer minor units
+- [x] Packages built cleanly (`pnpm run build:packages`)
+
+### Financial Core Services & Adapters
+- [x] `InvoiceService`: Sequential reference (`INV-YYYYMM-XXXX`), integer minor units standard (1 PKR = 100 paisa), immutable price snapshots, cancellation guard, Phase 8 notifications
+- [x] `PaymentService`: Sequential reference (`PAY-YYYYMM-XXXX`), atomic `prisma.$transaction`, overpayment prevention, multi-tender payment allocations, automatic cash drawer integration, idempotency key deduplication
+- [x] `RefundService`: Sequential reference (`REF-YYYYMM-XXXX`), two-stage review workflow, strict separation of duties (`reviewerId !== requestedById`), automatic invoice balance rollback, Phase 8 notifications
+- [x] `ExpenseService`: Clinic expenditure voucher tracking (`EXP-YYYYMM-XXXX`), configurable categories, cash drawer outflow integration
+- [x] `CashRegisterService`: Front-desk shift drawer sessions (`CRS-YYYYMM-XXXX`), opening float, expected closing math, physical counted cash discrepancy enforcement, audit reopening locks
+- [x] `ReconciliationService`: Multi-source automated & manual bank reconciliation, duplicate bank reference detection, discrepancy resolution
+- [x] `FinancialAnalyticsService`: Revenue, collections, expenses, net operating balance, aging buckets (0–30, 31–60, 61+), tender breakdown
+- [x] `ReceiptService`: ESC/POS 80mm thermal receipt HTML layout, official A4 invoice HTML layout, and on-the-fly synthetic PDF streamer
+- [x] `FinancialAuditService`: Immutable append-only audit ledger for all financial operations
+- [x] `RaastPaymentAdapter`: State Bank of Pakistan (SBP) Raast P2M EMVCo PKQR generator, returns explicit `BLOCKED` with regulatory onboarding instructions when unconfigured
+- [x] `CardPaymentAdapter`: Safepay/PayMob/Stripe aggregator client, timing-safe HMAC SHA-256 webhook signature verification, returns explicit `BLOCKED` when unconfigured
+- [x] `BankTransferAdapter`: Clinic IBAN validation and bank wire instructions
+
+### Controllers & Endpoints
+- [x] `/api/v1/finance/invoices`: Paginated invoice list, create draft, get invoice, issue invoice, cancel invoice with reason, print A4 HTML, stream PDF
+- [x] `/api/v1/finance/payments`: Collect payment with atomic allocations, list payments, get payment, get 80mm thermal receipt, payment gateway status
+- [x] `/api/v1/finance/refunds`: Request refund, review refund (approve/reject), list refunds
+- [x] `/api/v1/finance/expenses`: Create expense, update, review, list expenses, list/create expense categories
+- [x] `/api/v1/finance/cash-register`: Get active shift, open shift, close shift with discrepancy explanation, reopen shift, list sessions
+- [x] `/api/v1/finance/analytics`: High-level financial KPIs, revenue vs expense, tender distributions
+- [x] `/api/v1/finance/reconciliation`: Run multi-source reconciliation, manual bank deposit matching
+- [x] `/api/v1/patient/finance`: Patient portal endpoints: get invoices, get payments, download PDF invoices, view receipts
+- [x] `/api/v1/webhooks/payments/raast` & `/card`: Webhook endpoints with signature verification and event logging
+
+### Frontend Interfaces
+- [x] Operations Dashboard (`/dashboard/finance`): 8 KPI cards, 7 functional tabs (Invoices, Payments, Refunds, Expenses, Cash Register, Reconciliation, Analytics), 10 interactive action modals, live gateway status badges
+- [x] Patient Invoices Portal (`/patient/invoices`): Balance overview cards, invoice table with line item details modal, payment receipts table, one-click A4 PDF downloads, SBP/PTA compliant payment guidance modal
+- [x] Navigation: Added Billing & Finance links to dashboard layout and patient portal layout
+
+### Automated Tests & Monorepo Verification
+- [x] 6 dedicated finance test suites (31 unit tests):
+  - `finance-invoice.spec.ts` (6 tests)
+  - `finance-payment.spec.ts` (5 tests)
+  - `finance-refund.spec.ts` (4 tests)
+  - `finance-cash-register.spec.ts` (6 tests)
+  - `finance-reconciliation.spec.ts` (4 tests)
+  - `finance-adapter.spec.ts` (6 tests)
+- [x] Full backend test suite: **40/40 test suites passing, 249/249 unit tests passing (100%)**
+- [x] Next.js production build: `pnpm --filter @matabai/web build` passed with 0 errors (all 34 static and dynamic routes generated)

@@ -314,4 +314,67 @@ export class NotificationSchedulerService {
 
     this.logger.log(`Created staff in-app alert for ${memberships.length} staff members: "${title}"`);
   }
+
+  /**
+   * Schedule financial notifications (Invoice issued, payment received, refund)
+   */
+  async scheduleFinancialNotification(params: {
+    organizationId: string;
+    clinicId: string;
+    patientId: string;
+    eventType: NotificationEventType | string;
+    relatedEntityType: 'INVOICE' | 'PAYMENT' | 'REFUND';
+    relatedEntityId: string;
+    payload: Record<string, any>;
+  }): Promise<void> {
+    const {
+      organizationId,
+      clinicId,
+      patientId,
+      eventType,
+      relatedEntityType,
+      relatedEntityId,
+      payload,
+    } = params;
+
+    const patient = await this.prisma.patient.findUnique({
+      where: { id: patientId },
+    });
+
+    if (!patient) {
+      this.logger.warn(`Cannot schedule financial notification: Patient ${patientId} not found`);
+      return;
+    }
+
+    const rules = await this.rulesService.resolveRules(organizationId, clinicId, eventType);
+    for (const rule of rules) {
+      const idempotencyKey = `fin-${relatedEntityId}-${eventType}-${Date.now()}`;
+
+      await this.prisma.notificationJob.create({
+        data: {
+          organizationId,
+          clinicId,
+          recipientId: patient.id,
+          recipientType: 'PATIENT',
+          eventType,
+          channel: rule.channel,
+          templateId: rule.templateId || null,
+          relatedEntityType,
+          relatedEntityId,
+          scheduledAt: new Date(),
+          status: NotificationJobStatus.PENDING,
+          idempotencyKey,
+          payload: {
+            ...payload,
+            recipient_name: patient.fullName,
+            recipient_phone: patient.phone,
+          },
+          attempts: 0,
+          maxAttempts: 3,
+        },
+      });
+
+      this.logger.log(`Enqueued financial notification ${eventType} for ${relatedEntityType} ${relatedEntityId}`);
+    }
+  }
 }

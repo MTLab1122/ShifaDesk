@@ -320,3 +320,4 @@ export type ResendReportNotificationInput = z.infer<typeof resendReportNotificat
 export type VerifyReportAccessInput = z.infer<typeof verifyReportAccessSchema>;
 export type QueryLabReportsInput = z.infer<typeof queryLabReportsSchema>;
 export type QueryLabAnalyticsInput = z.infer<typeof queryLabAnalyticsSchema>;
+
