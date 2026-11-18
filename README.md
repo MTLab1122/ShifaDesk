@@ -1,8 +1,10 @@
 # MatabAI (ShifaDesk)
 
-> **Multilingual AI-Powered Clinic Operations SaaS Platform**  
+> **Enterprise Multilingual AI Clinic Operations, EMR-Lite & Diagnostic Laboratory SaaS Platform**  
 > Founder: **Muhammad Talha**  
-> Monorepo Architecture: **Next.js 15 (Web) + NestJS 10 (API) + Supabase/PostgreSQL**
+> 🌐 **Live Web Application:** [https://shifadesk-mtlab.vercel.app](https://shifadesk-mtlab.vercel.app) *(Production Alias: [https://shifadesk-ashen.vercel.app](https://shifadesk-ashen.vercel.app))*  
+> 📦 **Release:** [![v1.0.0](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/MTLab1122/ShifaDesk/releases/tag/v1.0.0) [![Live Demo](https://img.shields.io/badge/Demo-Live_on_Vercel-success.svg)](https://shifadesk-mtlab.vercel.app) [![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen.svg)](#)  
+> 🏗️ Monorepo Architecture: **Next.js 15 (App Router, React 19) + NestJS 10 (API) + PostgreSQL 16 + Redis 7**
 
 ---
 
