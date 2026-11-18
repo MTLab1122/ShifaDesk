@@ -7,10 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ApiClient } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { MOCK_CONVERSATIONS } from '@/lib/mock-data';
 import {
   WhatsappConversation,
-  WhatsappMessage,
   WhatsAppConnectionHealth,
 } from '@matabai/shared';
 import {
@@ -42,7 +40,6 @@ export default function ConversationsPage() {
   const [selectedTemplate, setSelectedTemplate] = React.useState('appointment_confirmation');
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSending, setIsSending] = React.useState(false);
-  const [useMockFallback, setUseMockFallback] = React.useState(false);
 
   // 1. Fetch WhatsApp Health
   const loadHealth = React.useCallback(async () => {
@@ -52,7 +49,6 @@ export default function ConversationsPage() {
         setHealth(res);
       }
     } catch {
-      // Offline or mock fallback
       setHealth({
         configured: false,
         connected: false,
@@ -75,19 +71,18 @@ export default function ConversationsPage() {
       });
 
       const items = res?.items || (res as any)?.data || [];
+      setConversations(items);
       if (items.length > 0) {
-        setConversations(items);
-        setUseMockFallback(false);
         if (!selectedId || !items.some((c: WhatsappConversation) => c.id === selectedId)) {
           const first = items[0] as WhatsappConversation;
           if (first) setSelectedId(first.id);
         }
       } else {
-        // Fallback to mock conversations so receptionists have immediate data to interact with
-        setUseMockFallback(true);
+        setSelectedId('');
+        setActiveThread(null);
       }
     } catch {
-      setUseMockFallback(true);
+      setConversations([]);
     } finally {
       setIsLoading(false);
     }
@@ -97,61 +92,6 @@ export default function ConversationsPage() {
   const loadActiveThread = React.useCallback(async () => {
     if (!selectedId) return;
 
-    if (useMockFallback) {
-      const mock = MOCK_CONVERSATIONS.find((m) => m.id === selectedId) || MOCK_CONVERSATIONS[0];
-      if (mock) {
-        const mockConv: WhatsappConversation = {
-          id: mock.id,
-          organizationId: 'org-1',
-          clinicId,
-          contactId: `contact-${mock.id}`,
-          status: 'OPEN',
-          lastMessagePreview: mock.lastMessage,
-          unreadCount: mock.unreadCount,
-          lastCustomerMessageAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          contact: {
-            id: `contact-${mock.id}`,
-            organizationId: 'org-1',
-            clinicId,
-            waId: mock.phone.replace(/[^0-9]/g, ''),
-            profileName: mock.patientName,
-            consentStatus: 'OPTED_IN',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            patient: {
-              id: `p-${mock.id}`,
-              organizationId: 'org-1',
-              clinicId,
-              patientNumber: `P-${mock.id}`,
-              fullName: mock.patientName,
-              phone: mock.phone,
-              consentStatus: 'GRANTED',
-              status: 'ACTIVE',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          },
-          messages: mock.messages.map((m, idx) => ({
-            id: m.id,
-            organizationId: 'org-1',
-            clinicId,
-            conversationId: mock.id,
-            contactId: `contact-${mock.id}`,
-            direction: m.sender === 'patient' ? 'INBOUND' : 'OUTBOUND',
-            messageType: 'text',
-            body: m.text,
-            status: 'DELIVERED',
-            createdAt: new Date(Date.now() - (mock.messages.length - idx) * 300000).toISOString(),
-            updatedAt: new Date().toISOString(),
-          })),
-        };
-        setActiveThread(mockConv);
-      }
-      return;
-    }
-
     try {
       const res = await ApiClient.whatsapp.getConversation(selectedId);
       if (res) {
@@ -160,7 +100,7 @@ export default function ConversationsPage() {
     } catch {
       // Handled gracefully
     }
-  }, [selectedId, useMockFallback, clinicId]);
+  }, [selectedId]);
 
   React.useEffect(() => {
     loadHealth();
@@ -178,35 +118,6 @@ export default function ConversationsPage() {
 
     setIsSending(true);
     try {
-      if (useMockFallback) {
-        const newMsg: WhatsappMessage = {
-          id: `msg-${Date.now()}`,
-          organizationId: 'org-1',
-          clinicId,
-          conversationId: activeThread.id,
-          contactId: activeThread.contactId,
-          direction: 'OUTBOUND',
-          messageType: 'text',
-          body: replyText.trim(),
-          status: 'SENT',
-          sentAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        setActiveThread((prev) =>
-          prev
-            ? {
-                ...prev,
-                lastMessagePreview: replyText.trim(),
-                messages: [...(prev.messages || []), newMsg],
-              }
-            : null,
-        );
-        setReplyText('');
-        return;
-      }
-
       await ApiClient.whatsapp.replyConversation(activeThread.id, replyText.trim());
       setReplyText('');
       await loadActiveThread();
@@ -298,29 +209,15 @@ export default function ConversationsPage() {
     : false;
 
   // Conversations to render
-  const displayConversations = useMockFallback
-    ? MOCK_CONVERSATIONS.filter(
-        (c) =>
-          c.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.phone.includes(searchTerm),
-      ).map((m) => ({
-        id: m.id,
-        patientName: m.patientName,
-        phone: m.phone,
-        lastMessage: m.lastMessage,
-        unreadCount: m.unreadCount,
-        status: 'OPEN',
-        isHandover: false,
-      }))
-    : conversations.map((c) => ({
-        id: c.id,
-        patientName: c.contact?.profileName || c.contact?.patient?.fullName || c.contact?.waId || 'WhatsApp Patient',
-        phone: c.contact?.waId || '',
-        lastMessage: c.lastMessagePreview || 'New message received',
-        unreadCount: c.unreadCount || 0,
-        status: c.status,
-        isHandover: c.status === 'HUMAN_HANDOVER',
-      }));
+  const displayConversations = conversations.map((c) => ({
+    id: c.id,
+    patientName: c.contact?.profileName || c.contact?.patient?.fullName || c.contact?.waId || 'WhatsApp Patient',
+    phone: c.contact?.waId || '',
+    lastMessage: c.lastMessagePreview || 'New message received',
+    unreadCount: c.unreadCount || 0,
+    status: c.status,
+    isHandover: c.status === 'HUMAN_HANDOVER',
+  }));
 
   return (
     <div className="space-y-6">

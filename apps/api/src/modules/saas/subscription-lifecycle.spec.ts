@@ -182,7 +182,7 @@ describe('SubscriptionLifecycleService', () => {
   });
 
   it('should process expirations and move expired trials to grace period', async () => {
-    mockPrisma.tenantSubscription.findMany.mockImplementation(({ where }) => {
+    mockPrisma.tenantSubscription.findMany.mockImplementation(({ where }: any) => {
       if (where.status === SubscriptionStatus.TRIALING) {
         return Promise.resolve([{ id: 'sub-trial-exp', status: SubscriptionStatus.TRIALING }]);
       }

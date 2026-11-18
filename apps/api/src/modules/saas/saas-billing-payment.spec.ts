@@ -75,7 +75,7 @@ describe('SaasBillingService & SaasPaymentService', () => {
 
   it('should create SaaS invoice with exact minor arithmetic in paisa', async () => {
     mockPrisma.subscriptionInvoice.findFirst.mockResolvedValue(null);
-    mockPrisma.subscriptionInvoice.create.mockImplementation(({ data }) =>
+    mockPrisma.subscriptionInvoice.create.mockImplementation(({ data }: any) =>
       Promise.resolve({ id: 'inv-created-1', ...data }),
     );
 
@@ -104,7 +104,7 @@ describe('SaasBillingService & SaasPaymentService', () => {
       organizationId: 'org-1',
       status: SaasInvoiceStatus.ISSUED,
     });
-    mockPrisma.subscriptionPayment.create.mockImplementation(({ data }) =>
+    mockPrisma.subscriptionPayment.create.mockImplementation(({ data }: any) =>
       Promise.resolve({ id: 'spay-1', ...data }),
     );
 

@@ -133,6 +133,7 @@ describe('TenantOnboardingService', () => {
         timezone: 'Asia/Karachi',
         password: 'Password123!',
         termsAccepted: true,
+        planCode: 'STARTER',
         billingInterval: BillingInterval.MONTHLY,
         startTrial: true,
       }),

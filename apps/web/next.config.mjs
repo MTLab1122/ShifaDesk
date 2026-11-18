@@ -11,6 +11,20 @@ const nextConfig = {
     };
     return config;
   },
+  async redirects() {
+    return [
+      {
+        source: '/platform',
+        destination: '/dashboard/platform',
+        permanent: false,
+      },
+      {
+        source: '/platform/:path*',
+        destination: '/dashboard/platform/:path*',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

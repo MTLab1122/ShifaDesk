@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EncounterService } from './services/encounter.service';
 import { PrismaService } from '../../common/database/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { EncounterStatus } from '@matabai/shared';
 
 describe('EncounterLifecycle (EncounterService)', () => {
