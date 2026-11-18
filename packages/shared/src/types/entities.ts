@@ -41,6 +41,22 @@ import {
   CashTransactionType,
   FinancialAdjustmentType,
   ReconciliationStatus,
+  EncounterStatus,
+  EncounterSource,
+  EncounterType,
+  DiagnosisType,
+  DiagnosisStatus,
+  PrescriptionStatus,
+  FollowupStatus,
+  SubscriptionStatus,
+  BillingInterval,
+  SaasInvoiceStatus,
+  SaasPaymentStatus,
+  SaasPaymentMethod,
+  FeatureCode,
+  SaasInvoiceItemType,
+  ClinicType,
+  TrialStatus,
 } from './enums.js';
 
 export interface Organization {
@@ -57,6 +73,7 @@ export interface Clinic {
   organizationId: string;
   name: string;
   slug: string;
+  clinicType?: ClinicType | string;
   address?: string | null;
   phone?: string | null;
   email?: string | null;
@@ -1319,6 +1336,227 @@ export interface ReconciliationItem {
   notes?: string | null;
 }
 
+// ==========================================
+// Phase 12: Clinical Encounter & EMR-Lite Interfaces
+// ==========================================
+
+export interface ClinicalEncounter {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId?: string | null;
+  queueTokenId?: string | null;
+  encounterReference: string;
+  encounterDate: string;
+  startTime: string;
+  endTime?: string | null;
+  timezone: string;
+  status: EncounterStatus | string;
+  source: EncounterSource | string;
+  type: EncounterType | string;
+  isFinalized: boolean;
+  finalizedAt?: string | null;
+  finalizedById?: string | null;
+  cancellationReason?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  organization?: Organization;
+  clinic?: Clinic;
+  patient?: Patient;
+  doctor?: Doctor;
+  appointment?: Appointment | null;
+  queueToken?: QueueToken | null;
+  clinicalNote?: ClinicalNote | null;
+  observations?: PatientObservation[];
+  diagnoses?: EncounterDiagnosis[];
+  prescriptions?: Prescription[];
+  laboratoryOrders?: LaboratoryOrder[];
+  invoices?: Invoice[];
+  followups?: EncounterFollowup[];
+  amendments?: EncounterAmendment[];
+  documentVersions?: ClinicalDocumentVersion[];
+}
+
+export interface EncounterStatusHistory {
+  id: string;
+  encounterId: string;
+  fromStatus?: string | null;
+  toStatus: string;
+  changeReason?: string | null;
+  changedById?: string | null;
+  createdAt: string;
+}
+
+export interface ClinicalNote {
+  id: string;
+  encounterId: string;
+  chiefComplaint: string;
+  patientReportedSymptoms?: string | null;
+  visitPurpose?: string | null;
+  visitContext?: string | null;
+  examinationNotes?: string | null;
+  clinicalAssessment?: string | null;
+  treatmentPlan?: string | null;
+  remarks?: string | null;
+  recordedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientMedicalHistory {
+  id: string;
+  organizationId: string;
+  patientId: string;
+  conditions?: string | null;
+  surgeries?: string | null;
+  allergies?: string | null;
+  familyHistory?: string | null;
+  socialHistory?: string | null;
+  currentMedications?: string | null;
+  lastUpdatedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientObservation {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  encounterId?: string | null;
+  systolicBp?: number | null;
+  diastolicBp?: number | null;
+  pulseRate?: number | null;
+  temperature?: number | null;
+  temperatureUnit: string;
+  respiratoryRate?: number | null;
+  oxygenSaturation?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  bmi?: number | null;
+  measuredAt: string;
+  recordedById?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface EncounterDiagnosis {
+  id: string;
+  encounterId: string;
+  patientId: string;
+  diagnosisDescription: string;
+  diagnosisCode?: string | null;
+  codingSystem: string;
+  type: DiagnosisType | string;
+  clinicalStatus: DiagnosisStatus | string;
+  notes?: string | null;
+  diagnosedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Prescription {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  encounterId: string;
+  patientId: string;
+  doctorId: string;
+  prescriptionReference: string;
+  version: number;
+  status: PrescriptionStatus | string;
+  cancellationReason?: string | null;
+  notes?: string | null;
+  issuedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  doctor?: Doctor;
+  patient?: Patient;
+  clinic?: Clinic;
+  items?: PrescriptionItem[];
+  amendments?: PrescriptionAmendment[];
+}
+
+export interface PrescriptionItem {
+  id: string;
+  prescriptionId: string;
+  medicationName: string;
+  genericName?: string | null;
+  strength: string;
+  dosageForm: string;
+  dosage: string;
+  route: string;
+  frequency: string;
+  duration: string;
+  quantity?: number | null;
+  instructions?: string | null;
+  createdAt: string;
+}
+
+export interface PrescriptionAmendment {
+  id: string;
+  prescriptionId: string;
+  version: number;
+  reason: string;
+  amendedById: string;
+  previousSnapshot: string;
+  newSnapshot: string;
+  createdAt: string;
+}
+
+export interface EncounterFollowup {
+  id: string;
+  encounterId: string;
+  clinicId: string;
+  patientId: string;
+  doctorId: string;
+  followupRequired: boolean;
+  recommendedDate: string;
+  instructions: string;
+  status: FollowupStatus | string;
+  scheduledAppointmentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EncounterAmendment {
+  id: string;
+  encounterId: string;
+  versionNumber: number;
+  amendmentReason: string;
+  amendedById: string;
+  previousStateJson: string;
+  amendedStateJson: string;
+  createdAt: string;
+}
+
+export interface ClinicalDocumentVersion {
+  id: string;
+  encounterId: string;
+  documentType: string;
+  versionNumber: number;
+  documentTitle: string;
+  contentJson: string;
+  isFinal: boolean;
+  signedById?: string | null;
+  signedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PatientClinicalHistory {
+  patient: Patient;
+  medicalHistory: PatientMedicalHistory | null;
+  encounters: ClinicalEncounter[];
+  observations: PatientObservation[];
+  prescriptions: Prescription[];
+  diagnoses: EncounterDiagnosis[];
+  laboratoryOrders: LaboratoryOrder[];
+  followups: EncounterFollowup[];
+}
+
 
 
 
@@ -1602,9 +1840,784 @@ export interface ReconciliationItem {
   notes?: string | null;
 }
 
+// ==========================================
+// Phase 12: Clinical Encounter & EMR-Lite Interfaces
+// ==========================================
+
+export interface ClinicalEncounter {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId?: string | null;
+  queueTokenId?: string | null;
+  encounterReference: string;
+  encounterDate: string;
+  startTime: string;
+  endTime?: string | null;
+  timezone: string;
+  status: EncounterStatus | string;
+  source: EncounterSource | string;
+  type: EncounterType | string;
+  isFinalized: boolean;
+  finalizedAt?: string | null;
+  finalizedById?: string | null;
+  cancellationReason?: string | null;
+  createdById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  organization?: Organization;
+  clinic?: Clinic;
+  patient?: Patient;
+  doctor?: Doctor;
+  appointment?: Appointment | null;
+  queueToken?: QueueToken | null;
+  clinicalNote?: ClinicalNote | null;
+  observations?: PatientObservation[];
+  diagnoses?: EncounterDiagnosis[];
+  prescriptions?: Prescription[];
+  laboratoryOrders?: LaboratoryOrder[];
+  invoices?: Invoice[];
+  followups?: EncounterFollowup[];
+  amendments?: EncounterAmendment[];
+  documentVersions?: ClinicalDocumentVersion[];
+}
+
+export interface EncounterStatusHistory {
+  id: string;
+  encounterId: string;
+  fromStatus?: string | null;
+  toStatus: string;
+  changeReason?: string | null;
+  changedById?: string | null;
+  createdAt: string;
+}
+
+export interface ClinicalNote {
+  id: string;
+  encounterId: string;
+  chiefComplaint: string;
+  patientReportedSymptoms?: string | null;
+  visitPurpose?: string | null;
+  visitContext?: string | null;
+  examinationNotes?: string | null;
+  clinicalAssessment?: string | null;
+  treatmentPlan?: string | null;
+  remarks?: string | null;
+  recordedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientMedicalHistory {
+  id: string;
+  organizationId: string;
+  patientId: string;
+  conditions?: string | null;
+  surgeries?: string | null;
+  allergies?: string | null;
+  familyHistory?: string | null;
+  socialHistory?: string | null;
+  currentMedications?: string | null;
+  lastUpdatedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientObservation {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  patientId: string;
+  encounterId?: string | null;
+  systolicBp?: number | null;
+  diastolicBp?: number | null;
+  pulseRate?: number | null;
+  temperature?: number | null;
+  temperatureUnit: string;
+  respiratoryRate?: number | null;
+  oxygenSaturation?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  bmi?: number | null;
+  measuredAt: string;
+  recordedById?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface EncounterDiagnosis {
+  id: string;
+  encounterId: string;
+  patientId: string;
+  diagnosisDescription: string;
+  diagnosisCode?: string | null;
+  codingSystem: string;
+  type: DiagnosisType | string;
+  clinicalStatus: DiagnosisStatus | string;
+  notes?: string | null;
+  diagnosedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Prescription {
+  id: string;
+  organizationId: string;
+  clinicId: string;
+  encounterId: string;
+  patientId: string;
+  doctorId: string;
+  prescriptionReference: string;
+  version: number;
+  status: PrescriptionStatus | string;
+  cancellationReason?: string | null;
+  notes?: string | null;
+  issuedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  doctor?: Doctor;
+  patient?: Patient;
+  clinic?: Clinic;
+  items?: PrescriptionItem[];
+  amendments?: PrescriptionAmendment[];
+}
+
+export interface PrescriptionItem {
+  id: string;
+  prescriptionId: string;
+  medicationName: string;
+  genericName?: string | null;
+  strength: string;
+  dosageForm: string;
+  dosage: string;
+  route: string;
+  frequency: string;
+  duration: string;
+  quantity?: number | null;
+  instructions?: string | null;
+  createdAt: string;
+}
+
+export interface PrescriptionAmendment {
+  id: string;
+  prescriptionId: string;
+  version: number;
+  reason: string;
+  amendedById: string;
+  previousSnapshot: string;
+  newSnapshot: string;
+  createdAt: string;
+}
+
+export interface EncounterFollowup {
+  id: string;
+  encounterId: string;
+  clinicId: string;
+  patientId: string;
+  doctorId: string;
+  followupRequired: boolean;
+  recommendedDate: string;
+  instructions: string;
+  status: FollowupStatus | string;
+  scheduledAppointmentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EncounterAmendment {
+  id: string;
+  encounterId: string;
+  versionNumber: number;
+  amendmentReason: string;
+  amendedById: string;
+  previousStateJson: string;
+  amendedStateJson: string;
+  createdAt: string;
+}
+
+export interface ClinicalDocumentVersion {
+  id: string;
+  encounterId: string;
+  documentType: string;
+  versionNumber: number;
+  documentTitle: string;
+  contentJson: string;
+  isFinal: boolean;
+  signedById?: string | null;
+  signedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PatientClinicalHistory {
+  patient: Patient;
+  medicalHistory: PatientMedicalHistory | null;
+  encounters: ClinicalEncounter[];
+  observations: PatientObservation[];
+  prescriptions: Prescription[];
+  diagnoses: EncounterDiagnosis[];
+  laboratoryOrders: LaboratoryOrder[];
+  followups: EncounterFollowup[];
+}
 
 
 
 
 
+
+
+
+
+// ==========================================
+// Phase 13: Advanced Analytics & BI Interfaces
+// ==========================================
+
+export interface KpiMetric {
+  value: number;
+  previousValue?: number | null;
+  changePercentage?: number | null;
+  trend?: 'UP' | 'DOWN' | 'NEUTRAL';
+  unit?: string;
+  periodLabel?: string;
+}
+
+export interface ExecutiveDashboardMetrics {
+  period: {
+    startDate: string;
+    endDate: string;
+    previousStartDate: string;
+    previousEndDate: string;
+    timezone: string;
+  };
+  appointments: {
+    total: KpiMetric;
+    completed: KpiMetric;
+    cancelled: KpiMetric;
+    noShow: KpiMetric;
+    completionRate: KpiMetric;
+  };
+  patients: {
+    totalRegistered: KpiMetric;
+    newRegistered: KpiMetric;
+    activePatients: KpiMetric;
+  };
+  clinical: {
+    totalEncounters: KpiMetric;
+    completedEncounters: KpiMetric;
+    activeDoctors: KpiMetric;
+  };
+  laboratory: {
+    totalOrders: KpiMetric;
+    releasedReports: KpiMetric;
+    pendingReviewReports: KpiMetric;
+  };
+  finance: {
+    invoicedAmountPaisa: KpiMetric;
+    collectedPaymentsPaisa: KpiMetric;
+    outstandingReceivablesPaisa: KpiMetric;
+    refundsPaisa: KpiMetric;
+    expensesPaisa: KpiMetric;
+    netOperatingBalancePaisa: KpiMetric;
+  };
+  communications: {
+    totalWhatsappMessages: KpiMetric;
+    totalVoiceCalls: KpiMetric;
+    aiInteractions: KpiMetric;
+    aiHandovers: KpiMetric;
+  };
+}
+
+export interface AppointmentAnalytics {
+  totalAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
+  noShowAppointments: number;
+  completionRate: number;
+  cancellationRate: number;
+  noShowRate: number;
+  reschedulingCount: number;
+  walkInCount: number;
+  scheduledCount: number;
+  avgBookingLeadTimeHours: number;
+  volumeTimeline: Array<{ date: string; total: number; completed: number; cancelled: number; noShow: number }>;
+  statusDistribution: Record<string, number>;
+  demandBySpecialty: Array<{ specialty: string; count: number }>;
+  demandByDoctor: Array<{ doctorId: string; doctorName: string; count: number }>;
+  demandByClinic: Array<{ clinicId: string; clinicName: string; count: number }>;
+  peakBookingHours: Array<{ hour: number; count: number }>;
+  peakBookingDays: Array<{ day: string; count: number }>;
+}
+
+export interface QueueAnalytics {
+  tokensIssued: number;
+  tokensCompleted: number;
+  tokensSkipped: number;
+  tokensCancelled: number;
+  tokensNoShow: number;
+  sampleSizeWaitTime: number;
+  avgWaitTimeMinutes: number;
+  medianWaitTimeMinutes: number;
+  sampleSizeServiceDuration: number;
+  avgServiceDurationMinutes: number;
+  hourlyQueueLoad: Array<{ hour: number; tokens: number }>;
+  dailyQueueVolume: Array<{ date: string; tokens: number; completed: number }>;
+  doctorQueuePerformance: Array<{
+    doctorId: string;
+    doctorName: string;
+    tokensServed: number;
+    avgServiceMinutes: number;
+  }>;
+  clinicQueuePerformance: Array<{
+    clinicId: string;
+    clinicName: string;
+    tokensServed: number;
+    avgWaitMinutes: number;
+  }>;
+}
+
+export interface PatientAnalytics {
+  totalPatients: number;
+  newRegistrations: number;
+  returningPatients: number;
+  activePatients: number;
+  inactivePatients: number;
+  appointmentToEncounterConversionRate: number;
+  registrationTrends: Array<{ date: string; newPatients: number }>;
+  visitFrequencyDistribution: Array<{ visitCountRange: string; patientCount: number }>;
+  visitsByClinic: Array<{ clinicId: string; clinicName: string; patientCount: number }>;
+}
+
+export interface DoctorStaffAnalytics {
+  doctorWorkloads: Array<{
+    doctorId: string;
+    doctorName: string;
+    specialty: string;
+    appointmentsAssigned: number;
+    appointmentsCompleted: number;
+    encountersCompleted: number;
+    avgEncounterDurationMinutes: number;
+    followupsScheduled: number;
+    followupsCompleted: number;
+    labOrdersInitiated: number;
+  }>;
+}
+
+export interface LaboratoryAnalyticsData {
+  totalOrders: number;
+  ordersByStatus: Record<string, number>;
+  ordersByCategory: Array<{ category: string; count: number }>;
+  sampleCollectionVolume: number;
+  sampleRejectionRate: number;
+  recollectionRate: number;
+  avgTurnaroundHours: number;
+  reportsApproved: number;
+  reportsReleased: number;
+  reportsPendingReview: number;
+  revenuePaisa: number;
+}
+
+export interface FinancialAnalyticsSummary {
+  totalInvoicedPaisa: number;
+  totalCollectedPaisa: number;
+  outstandingReceivablesPaisa: number;
+  totalRefundsPaisa: number;
+  totalExpensesPaisa: number;
+  netOperatingBalancePaisa: number;
+  cashRegisterCollectionsPaisa: number;
+  paymentMethodDistribution: Record<string, number>;
+  revenueByConsultationPaisa: number;
+  revenueByLaboratoryPaisa: number;
+  expenseCategoryBreakdown: Array<{ category: string; amountPaisa: number }>;
+  revenueTrends: Array<{ date: string; invoicedPaisa: number; collectedPaisa: number }>;
+}
+
+export interface CommunicationAnalytics {
+  whatsapp: {
+    inboundMessages: number;
+    outboundMessages: number;
+    deliverySuccessRate: number;
+    failedMessages: number;
+    conversations: number;
+    humanHandovers: number;
+  };
+  voice: {
+    totalCalls: number;
+    answeredCalls: number;
+    missedCalls: number;
+    completedCalls: number;
+    transferredCalls: number;
+    avgDurationSeconds: number;
+    languageDistribution: Record<string, number>;
+  };
+}
+
+export interface AIUsageAnalytics {
+  totalInteractions: number;
+  intentDistribution: Record<string, number>;
+  toolExecutionsCount: number;
+  toolExecutionSuccessRate: number;
+  appointmentBookingsAttempted: number;
+  appointmentBookingsCompleted: number;
+  handoverCount: number;
+  handoverRate: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
+  estimatedCostPkr: number;
+}
+
+export interface SavedReportConfiguration {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  name: string;
+  description?: string | null;
+  category: string;
+  dimensions: string[];
+  metrics: string[];
+  filtersJson: Record<string, any>;
+  grouping?: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduledReport {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  reportConfigurationId: string;
+  name: string;
+  frequency: string;
+  recipients: string[];
+  exportFormat: string;
+  status: string;
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  reportConfiguration?: SavedReportConfiguration;
+  runs?: ScheduledReportRun[];
+}
+
+export interface ScheduledReportRun {
+  id: string;
+  scheduledReportId: string;
+  organizationId: string;
+  runStatus: string;
+  rowCount: number;
+  recipientsDelivered: string[];
+  failureReason?: string | null;
+  executionDurationMs: number;
+  startedAt: string;
+  completedAt?: string | null;
+}
+
+export interface AnalyticsExportLog {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  reportName: string;
+  category: string;
+  exportFormat: string;
+  filtersApplied: Record<string, any>;
+  rowCount: number;
+  fileSizeBytes: number;
+  exportedById: string;
+  exportedAt: string;
+}
+
+export interface ReportQueryResult {
+  columns: Array<{ key: string; label: string; type: 'string' | 'number' | 'date' | 'currency' }>;
+  rows: Array<Record<string, any>>;
+  summary?: Record<string, any>;
+  totalRows: number;
+  generatedAt: string;
+}
+
+// ==========================================
+// Phase 14: SaaS Subscription Entities & DTOs
+// ==========================================
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  monthlyPricePaisa: number;
+  annualPricePaisa: number;
+  currency: string;
+  trialDays: number;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  versions?: SubscriptionPlanVersion[];
+}
+
+export interface SubscriptionPlanVersion {
+  id: string;
+  planId: string;
+  version: number;
+  monthlyPricePaisa: number;
+  annualPricePaisa: number;
+  currency: string;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  features: string[];
+  limits: Record<string, number>;
+  overagePolicy: string;
+  gracePeriodDays: number;
+  createdAt: string;
+  plan?: SubscriptionPlan;
+  entitlements?: PlanEntitlement[];
+}
+
+export interface PlanEntitlement {
+  id: string;
+  planVersionId: string;
+  featureCode: FeatureCode | string;
+  isIncluded: boolean;
+  limitType: 'UNLIMITED' | 'COUNT' | 'BOOLEAN';
+  limitValue: number;
+  description?: string | null;
+  createdAt: string;
+}
+
+export interface TenantSubscription {
+  id: string;
+  organizationId: string;
+  planId: string;
+  planVersionId: string;
+  status: SubscriptionStatus;
+  billingInterval: BillingInterval;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  trialStart?: string | null;
+  trialEnd?: string | null;
+  gracePeriodEnd?: string | null;
+  cancelAtPeriodEnd: boolean;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
+  unitPricePaisa: number;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+  organization?: Organization;
+  plan?: SubscriptionPlan;
+  planVersion?: SubscriptionPlanVersion;
+}
+
+export interface SubscriptionStatusHistory {
+  id: string;
+  subscriptionId: string;
+  previousStatus?: string | null;
+  newStatus: string;
+  reason?: string | null;
+  changedById?: string | null;
+  createdAt: string;
+}
+
+export interface SubscriptionInvoice {
+  id: string;
+  invoiceNumber: string;
+  organizationId: string;
+  subscriptionId?: string | null;
+  planVersionSnapshot: Record<string, any>;
+  status: SaasInvoiceStatus;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  currency: string;
+  subtotalPaisa: number;
+  discountPaisa: number;
+  taxPaisa: number;
+  totalPaisa: number;
+  amountPaidPaisa: number;
+  outstandingPaisa: number;
+  issueDate: string;
+  dueDate: string;
+  paidAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  organization?: Organization;
+  items?: SubscriptionInvoiceItem[];
+  payments?: SubscriptionPayment[];
+}
+
+export interface SubscriptionInvoiceItem {
+  id: string;
+  invoiceId: string;
+  description: string;
+  itemType: SaasInvoiceItemType | string;
+  quantity: number;
+  unitPricePaisa: number;
+  totalPricePaisa: number;
+  createdAt: string;
+}
+
+export interface SubscriptionPayment {
+  id: string;
+  paymentNumber: string;
+  invoiceId: string;
+  organizationId: string;
+  amountPaisa: number;
+  currency: string;
+  paymentMethod: SaasPaymentMethod | string;
+  status: SaasPaymentStatus;
+  provider: string;
+  providerTransactionId?: string | null;
+  paymentReference?: string | null;
+  proofDocumentUrl?: string | null;
+  verifiedById?: string | null;
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+  invoice?: SubscriptionInvoice;
+}
+
+export interface TenantEntitlementOverride {
+  id: string;
+  organizationId: string;
+  featureCode: FeatureCode | string;
+  isIncluded: boolean;
+  limitValue?: number | null;
+  grantedReason: string;
+  expiresAt?: string | null;
+  grantedById: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UsageEvent {
+  id: string;
+  organizationId: string;
+  clinicId?: string | null;
+  featureCode: FeatureCode | string;
+  quantity: number;
+  source: string;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, any>;
+  timestamp: string;
+  createdAt: string;
+}
+
+export interface UsagePeriodSummary {
+  id: string;
+  organizationId: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  featureCode: FeatureCode | string;
+  totalUsage: number;
+  limitValue: number;
+  isExceeded: boolean;
+  lastAggregatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrialRecord {
+  id: string;
+  organizationId: string;
+  userProfileId: string;
+  planId: string;
+  startedAt: string;
+  expiresAt: string;
+  extendedDays: number;
+  extensionReason?: string | null;
+  status: TrialStatus | string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PromotionalCredit {
+  id: string;
+  organizationId: string;
+  code: string;
+  amountPaisa: number;
+  remainingPaisa: number;
+  expiresAt?: string | null;
+  isActive: boolean;
+  grantedById: string;
+  reason: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlatformAdminAuditLog {
+  id: string;
+  actorUserId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  metadata?: Record<string, any>;
+  ipAddress?: string | null;
+  createdAt: string;
+}
+
+export interface UsageSummaryItem {
+  featureCode: FeatureCode | string;
+  label: string;
+  currentUsage: number;
+  limitValue: number;
+  isUnlimited: boolean;
+  percentageUsed: number;
+  status: 'NORMAL' | 'WARNING' | 'EXCEEDED';
+  unit: string;
+}
+
+export interface TenantUsageSummary {
+  organizationId: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  daysRemainingInPeriod: number;
+  items: UsageSummaryItem[];
+}
+
+export interface PlatformOverviewMetrics {
+  totalTenants: number;
+  activeSubscriptions: number;
+  trialingSubscriptions: number;
+  suspendedSubscriptions: number;
+  cancelledSubscriptions: number;
+  expiredSubscriptions: number;
+  mrrPaisa: number;
+  arrPaisa: number;
+  outstandingInvoicesPaisa: number;
+  churnRatePercent: number;
+  planDistribution: Array<{ planCode: string; planName: string; count: number; percentage: number }>;
+  recentSignups: Array<{
+    organizationId: string;
+    organizationName: string;
+    slug: string;
+    createdAt: string;
+    status: string;
+    planName: string;
+    subscriptionStatus: string;
+  }>;
+}
+
+export interface TenantOnboardingStatus {
+  accountRegistered: boolean;
+  clinicProfileCompleted: boolean;
+  planSelected: boolean;
+  operatingHoursConfigured: boolean;
+  staffInvited: boolean;
+  completed: boolean;
+}
+
+export interface ClinicRegistrationResponse {
+  organizationId: string;
+  clinicId: string;
+  userProfileId: string;
+  token: string;
+  subscriptionId?: string;
+  status: 'SUCCESS';
+  message: string;
+}
 

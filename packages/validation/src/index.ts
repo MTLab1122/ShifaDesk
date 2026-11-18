@@ -19,3 +19,6 @@ export * from './notification.schema.js';
 export * from './voice.schema.js';
 export * from './laboratory.schema.js';
 export * from './finance.schema.js';
+export * from './encounter.schema.js';
+export * from './analytics.schema.js';
+export * from './subscription.schema.js';

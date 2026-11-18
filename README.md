@@ -156,6 +156,18 @@ See [AGENT_WORKFLOW.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(Shifa
 - [ARCHITECTURE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/ARCHITECTURE.md) — System Architecture & Module Boundaries
 - [DATABASE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/DATABASE.md) — PostgreSQL / Supabase Strategy & Migrations
 - [API.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/API.md) — REST API Conventions & Error Contracts
+- [PRODUCTION_READINESS.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/PRODUCTION_CHECKLIST.md) — Production Readiness, DevOps & Go-Live Checklist
+- [PRODUCTION_ARCHITECTURE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/PRODUCTION_ARCHITECTURE.md) — Production Infrastructure Topology, Compute Tiers & High Availability
+- [DEPLOYMENT_GUIDE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/DEPLOYMENT_GUIDE.md) — Multi-Environment Deployment Guide & Release Workflows
+- [SECURITY_HARDENING.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/SECURITY_HARDENING.md) — Zero-Trust Security Architecture, Encryption & Threat Model
+- [BACKUP_AND_RECOVERY.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/BACKUP_AND_RECOVERY.md) — Backup Automation, RPO/RTO Targets & Disaster Recovery
+- [MONITORING_AND_ALERTING.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/MONITORING_AND_ALERTING.md) — Observability, Health Probes & Alerting Thresholds
+- [INCIDENT_RESPONSE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/INCIDENT_RESPONSE.md) — Incident Response Runbooks, Severity Matrix & Post-Mortem Guidelines
+- [ROLLBACK_PROCEDURE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/ROLLBACK_PROCEDURE.md) — Code & Database Rollback Standard Operating Procedures
+- [LOAD_TESTING.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/production/LOAD_TESTING.md) — Performance Benchmark Runner & Capacity Planning
+- [SAAS_SUBSCRIPTION_PLATFORM.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/saas/SAAS_SUBSCRIPTION_PLATFORM.md) — SaaS Subscription Management, Tenant Onboarding & Platform Administration
+- [CLINICAL_EMR_LITE.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/clinical/CLINICAL_EMR_LITE.md) — Clinical Encounters, Longitudinal EMR-Lite & Prescriptions
+- [ADVANCED_ANALYTICS_BI.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/analytics/ADVANCED_ANALYTICS_BI.md) — Business Intelligence, Executive Dashboards & Scheduled Reporting
 - [FINANCIAL_MANAGEMENT.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/finance/FINANCIAL_MANAGEMENT.md) — Billing, Invoicing, Multi-Tender Payments & Cash Drawers
 - [DIAGNOSTIC_LABORATORY.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/docs/laboratory/DIAGNOSTIC_LABORATORY.md) — Pathology Specimen & Report Delivery
 - [SECURITY.md](file:///c:/Users/muham/OneDrive/Desktop/MatabAI%20(ShifaDesk)/SECURITY.md) — Security & Compliance Standards

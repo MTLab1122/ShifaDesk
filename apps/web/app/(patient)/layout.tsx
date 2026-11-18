@@ -23,6 +23,7 @@ export default function PatientLayout({
     { title: 'Book Appointment', href: '/patient/book-appointment', icon: Calendar },
     { title: 'My Appointments', href: '/patient/appointments', icon: Clock },
     { title: 'Live Token', href: '/patient/tokens', icon: Activity },
+    { title: 'Consultations', href: '/patient/encounters', icon: FileText },
     { title: 'Lab Reports', href: '/patient/reports', icon: FileText },
     { title: 'Invoices & Billing', href: '/patient/invoices', icon: Receipt },
     { title: 'My Profile', href: '/patient/profile', icon: User },

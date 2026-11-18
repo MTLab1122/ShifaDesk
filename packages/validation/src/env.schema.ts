@@ -53,6 +53,34 @@ export const apiEnvSchema = z.object({
   VOICE_WEBHOOK_BASE_URL: z.string().url().optional(),
   VOICE_RECORDING_ENABLED: z.coerce.boolean().default(false),
   VOICE_DEFAULT_LANGUAGE: z.enum(['ur', 'ps', 'en']).default('ur'),
+
+  // Phase 10: Private Diagnostic Report Storage
+  STORAGE_REPORT_ENCRYPTION_KEY: z
+    .string()
+    .min(32, 'Encryption key must be at least 32 characters')
+    .default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),
+  REPORT_STORAGE_PATH: z.string().default('uploads/reports'),
+
+  // Phase 11 & 14: Payment Gateways (Safepay / Raast)
+  SAFEPAY_API_KEY: z.string().optional(),
+  SAFEPAY_SECRET_KEY: z.string().optional(),
+  SAFEPAY_SANDBOX: z.coerce.boolean().default(true),
+
+  // Phase 8: Notification Adapters (Email / SMS)
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().optional().default('noreply@matabai.com'),
+  SMS_GATEWAY_URL: z.string().url().optional(),
+  SMS_API_KEY: z.string().optional(),
+
+  // Phase 15: Production Hardening, Rate Limiting & Observability
+  RATE_LIMIT_TTL: z.coerce.number().default(60),
+  RATE_LIMIT_MAX: z.coerce.number().default(100),
+  LOG_FORMAT: z.enum(['text', 'json']).default('text'),
+  METRICS_ENABLED: z.coerce.boolean().default(true),
+  SHUTDOWN_TIMEOUT_MS: z.coerce.number().default(10000),
 });
 
 export const webEnvSchema = z.object({

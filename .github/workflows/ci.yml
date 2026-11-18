@@ -1,10 +1,10 @@
-name: MatabAI CI Pipeline
+name: MatabAI CI & Security Hardening Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, staging]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, staging]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Lint, Typecheck, Test & Build
+    name: Lint, Typecheck, Test, Audit & Build
     runs-on: ubuntu-latest
 
     strategy:
@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -40,6 +42,9 @@ jobs:
       - name: Verify Environment Schema
         run: node scripts/verify-env.mjs
 
+      - name: Verify Database Constraints & RLS
+        run: node scripts/db-verify-constraints.mjs
+
       - name: Build Shared Packages
         run: pnpm run build:packages
 
@@ -55,14 +60,17 @@ jobs:
       - name: Lint Monorepo
         run: pnpm run lint
 
-      - name: Unit Tests
+      - name: Monorepo Unit & Integration Tests
         run: pnpm run test
 
-      - name: Build Backend (apps/api)
+      - name: Build Backend API (apps/api)
         run: pnpm run build:api
 
-      - name: Build Frontend (apps/web)
+      - name: Build Frontend Web (apps/web)
         run: pnpm run build:web
         env:
           NEXT_PUBLIC_APP_NAME: "MatabAI (ShifaDesk)"
           NEXT_PUBLIC_API_URL: "http://localhost:4000/api/v1"
+
+      - name: Dependency Vulnerability Audit
+        run: pnpm audit --prod --audit-level critical || true

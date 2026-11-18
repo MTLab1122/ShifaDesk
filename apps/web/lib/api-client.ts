@@ -58,6 +58,37 @@ import {
   ExpenseCategory,
   CashRegisterSession,
   FinancialAnalytics,
+  ClinicalEncounter,
+  ClinicalNote,
+  PatientMedicalHistory,
+  PatientObservation,
+  EncounterDiagnosis,
+  Prescription,
+  EncounterFollowup,
+  PatientClinicalHistory,
+  ExecutiveDashboardMetrics,
+  AppointmentAnalytics,
+  QueueAnalytics,
+  PatientAnalytics,
+  DoctorStaffAnalytics,
+  LaboratoryAnalyticsData,
+  FinancialAnalyticsSummary,
+  CommunicationAnalytics,
+  AIUsageAnalytics,
+  SavedReportConfiguration,
+  ScheduledReport,
+  ReportQueryResult,
+  SubscriptionPlan,
+  TenantSubscription,
+  SubscriptionInvoice,
+  SubscriptionPayment,
+  TenantUsageSummary,
+  PlatformOverviewMetrics,
+  TenantOnboardingStatus,
+  ClinicRegistrationResponse,
+  TenantEntitlementOverride,
+  PromotionalCredit,
+  PlatformAdminAuditLog,
 } from '@matabai/shared';
 import {
   CreateWhatsappIntegrationInput,
@@ -122,6 +153,43 @@ import {
   QueryCashSessionsInput,
   QueryFinancialAnalyticsInput,
   ManualReconciliationInput,
+  CreateEncounterInput,
+  UpdateEncounterStatusInput,
+  ReassignEncounterInput,
+  CancelEncounterInput,
+  QueryEncountersInput,
+  SaveClinicalNoteInput,
+  SaveMedicalHistoryInput,
+  RecordObservationInput,
+  CreateDiagnosisInput,
+  UpdateDiagnosisInput,
+  CreatePrescriptionInput,
+  AmendPrescriptionInput,
+  CancelPrescriptionInput,
+  QueryPrescriptionsInput,
+  CreateFollowupInput,
+  UpdateFollowupInput,
+  QueryFollowupsInput,
+  FinalizeEncounterInput,
+  AmendEncounterInput,
+  AnalyticsFilterInput,
+  SaveReportConfigurationInput,
+  UpdateReportConfigurationInput,
+  RunReportQueryInput,
+  ExportReportInput,
+  CreateScheduledReportInput,
+  UpdateScheduledReportInput,
+  ClinicRegistrationInput,
+  CompleteOnboardingInput,
+  CreateSubscriptionPlanInput,
+  UpdateSubscriptionPlanInput,
+  UpgradePlanInput,
+  DowngradePlanInput,
+  CancelSubscriptionInput,
+  SubmitPaymentProofInput,
+  TenantStatusActionInput,
+  GrantEntitlementOverrideInput,
+  GrantPromotionalCreditInput,
 } from '@matabai/validation';
 
 const API_BASE_URL =
@@ -1597,5 +1665,437 @@ export class ApiClient {
     getPatientPayments: () => ApiClient.request<Payment[]>('/patient/finance/payments'),
     getPatientPdfUrl: (id: string) => `${API_BASE_URL}/patient/finance/invoices/${id}/pdf`,
     getPatientReceiptUrl: (paymentId: string) => `${API_BASE_URL}/patient/finance/receipts/${paymentId}`,
+  };
+
+  static readonly encounter = {
+    // Encounters
+    create: (data: CreateEncounterInput) =>
+      ApiClient.request<ClinicalEncounter>('/encounters', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    list: (params?: Partial<QueryEncountersInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.doctorId) q.set('doctorId', params.doctorId);
+      if (params?.patientId) q.set('patientId', params.patientId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.date) q.set('date', params.date);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      if (params?.search) q.set('search', params.search);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<ClinicalEncounter>>(`/encounters?${q.toString()}`);
+    },
+    get: (id: string) => ApiClient.request<ClinicalEncounter>(`/encounters/${id}`),
+    updateStatus: (id: string, data: UpdateEncounterStatusInput) =>
+      ApiClient.request<ClinicalEncounter>(`/encounters/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    reassign: (id: string, data: ReassignEncounterInput) =>
+      ApiClient.request<ClinicalEncounter>(`/encounters/${id}/reassign`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    cancel: (id: string, data: CancelEncounterInput) =>
+      ApiClient.request<ClinicalEncounter>(`/encounters/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    finalize: (id: string, data: FinalizeEncounterInput) =>
+      ApiClient.request<ClinicalEncounter>(`/encounters/${id}/finalize`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    amend: (id: string, data: AmendEncounterInput) =>
+      ApiClient.request<any>(`/encounters/${id}/amend`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    // Clinical Notes
+    saveNote: (encounterId: string, data: SaveClinicalNoteInput) =>
+      ApiClient.request<ClinicalNote>(`/encounters/${encounterId}/notes`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getNote: (encounterId: string) =>
+      ApiClient.request<ClinicalNote>(`/encounters/${encounterId}/notes`),
+
+    // Observations / Vitals
+    recordObservation: (data: RecordObservationInput) =>
+      ApiClient.request<PatientObservation>('/encounters/observations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getEncounterObservations: (encounterId: string) =>
+      ApiClient.request<PatientObservation[]>(`/encounters/${encounterId}/observations`),
+    getPatientObservations: (patientId: string) =>
+      ApiClient.request<PatientObservation[]>(`/patients/${patientId}/observations`),
+
+    // Diagnoses
+    createDiagnosis: (encounterId: string, data: Omit<CreateDiagnosisInput, 'encounterId'>) =>
+      ApiClient.request<EncounterDiagnosis>(`/encounters/${encounterId}/diagnoses`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getDiagnoses: (encounterId: string) =>
+      ApiClient.request<EncounterDiagnosis[]>(`/encounters/${encounterId}/diagnoses`),
+    updateDiagnosis: (id: string, data: UpdateDiagnosisInput) =>
+      ApiClient.request<EncounterDiagnosis>(`/encounters/diagnoses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteDiagnosis: (id: string) =>
+      ApiClient.request<{ success: boolean }>(`/encounters/diagnoses/${id}`, {
+        method: 'DELETE',
+      }),
+
+    // Prescriptions
+    createPrescription: (data: CreatePrescriptionInput) =>
+      ApiClient.request<Prescription>('/prescriptions', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listPrescriptions: (params?: Partial<QueryPrescriptionsInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.doctorId) q.set('doctorId', params.doctorId);
+      if (params?.patientId) q.set('patientId', params.patientId);
+      if (params?.encounterId) q.set('encounterId', params.encounterId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.search) q.set('search', params.search);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<Prescription>>(`/prescriptions?${q.toString()}`);
+    },
+    getPrescription: (id: string) =>
+      ApiClient.request<Prescription>(`/prescriptions/${id}`),
+    amendPrescription: (id: string, data: AmendPrescriptionInput) =>
+      ApiClient.request<Prescription>(`/prescriptions/${id}/amend`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    cancelPrescription: (id: string, data: CancelPrescriptionInput) =>
+      ApiClient.request<Prescription>(`/prescriptions/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getPrescriptionHtml: (id: string) =>
+      ApiClient.request<{ html: string }>(`/prescriptions/${id}/html`),
+    getPrescriptionPrintUrl: (id: string) => `${API_BASE_URL}/prescriptions/${id}/print`,
+
+    // Follow-ups
+    createFollowup: (encounterId: string, data: Omit<CreateFollowupInput, 'encounterId'>) =>
+      ApiClient.request<EncounterFollowup>(`/encounters/${encounterId}/followups`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateFollowup: (id: string, data: UpdateFollowupInput) =>
+      ApiClient.request<EncounterFollowup>(`/encounters/followups/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    listFollowups: (params?: Partial<QueryFollowupsInput>) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.doctorId) q.set('doctorId', params.doctorId);
+      if (params?.patientId) q.set('patientId', params.patientId);
+      if (params?.status) q.set('status', params.status);
+      if (params?.date) q.set('date', params.date);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      if (params?.page) q.set('page', String(params.page));
+      if (params?.limit) q.set('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<EncounterFollowup>>(`/encounters/followups?${q.toString()}`);
+    },
+
+    // Patient Clinical History & Portal
+    getPatientClinicalHistory: (patientId: string) =>
+      ApiClient.request<PatientClinicalHistory>(`/patients/${patientId}/clinical-history`),
+    getPatientMedicalHistory: (patientId: string) =>
+      ApiClient.request<PatientMedicalHistory>(`/patients/${patientId}/medical-history`),
+    savePatientMedicalHistory: (patientId: string, data: SaveMedicalHistoryInput) =>
+      ApiClient.request<PatientMedicalHistory>(`/patients/${patientId}/medical-history`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getPatientEncounters: () =>
+      ApiClient.request<any[]>('/patient/clinical/encounters'),
+    getPatientPrescriptions: () =>
+      ApiClient.request<PaginatedResult<Prescription>>('/patient/clinical/prescriptions'),
+  };
+
+  // Phase 13 Advanced Analytics & Reporting
+  static analytics = {
+    getDashboard: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.doctorId) q.set('doctorId', params.doctorId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<ExecutiveDashboardMetrics>(`/analytics/dashboard?${q.toString()}`);
+    },
+    getAppointments: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.doctorId) q.set('doctorId', params.doctorId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<AppointmentAnalytics>(`/analytics/appointments?${q.toString()}`);
+    },
+    getQueue: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.doctorId) q.set('doctorId', params.doctorId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<QueueAnalytics>(`/analytics/queue?${q.toString()}`);
+    },
+    getPatients: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<PatientAnalytics>(`/analytics/patients?${q.toString()}`);
+    },
+    getStaff: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<DoctorStaffAnalytics>(`/analytics/staff?${q.toString()}`);
+    },
+    getLaboratory: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<LaboratoryAnalyticsData>(`/analytics/laboratory?${q.toString()}`);
+    },
+    getFinance: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<FinancialAnalyticsSummary>(`/analytics/finance?${q.toString()}`);
+    },
+    getCommunications: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<CommunicationAnalytics>(`/analytics/communications?${q.toString()}`);
+    },
+    getAIUsage: (params?: AnalyticsFilterInput) => {
+      const q = new URLSearchParams();
+      if (params?.clinicId) q.set('clinicId', params.clinicId);
+      if (params?.period) q.set('period', params.period);
+      if (params?.startDate) q.set('startDate', params.startDate);
+      if (params?.endDate) q.set('endDate', params.endDate);
+      return ApiClient.request<AIUsageAnalytics>(`/analytics/ai-usage?${q.toString()}`);
+    },
+  };
+
+  static reports = {
+    query: (data: RunReportQueryInput) =>
+      ApiClient.request<ReportQueryResult>('/analytics/reports/query', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    export: (data: ExportReportInput) =>
+      ApiClient.request<Blob>('/analytics/reports/export', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listConfigurations: (clinicId?: string) =>
+      ApiClient.request<SavedReportConfiguration[]>(
+        `/analytics/reports/configurations${clinicId ? `?clinicId=${clinicId}` : ''}`,
+      ),
+    createConfiguration: (data: SaveReportConfigurationInput) =>
+      ApiClient.request<SavedReportConfiguration>('/analytics/reports/configurations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getConfiguration: (id: string) =>
+      ApiClient.request<SavedReportConfiguration>(`/analytics/reports/configurations/${id}`),
+    updateConfiguration: (id: string, data: UpdateReportConfigurationInput) =>
+      ApiClient.request<SavedReportConfiguration>(`/analytics/reports/configurations/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteConfiguration: (id: string) =>
+      ApiClient.request<{ success: boolean }>(`/analytics/reports/configurations/${id}`, {
+        method: 'DELETE',
+      }),
+    listScheduledReports: (clinicId?: string) =>
+      ApiClient.request<ScheduledReport[]>(
+        `/analytics/reports/scheduled${clinicId ? `?clinicId=${clinicId}` : ''}`,
+      ),
+    createScheduledReport: (data: CreateScheduledReportInput) =>
+      ApiClient.request<ScheduledReport>('/analytics/reports/scheduled', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getScheduledReport: (id: string) =>
+      ApiClient.request<ScheduledReport>(`/analytics/reports/scheduled/${id}`),
+    updateScheduledReport: (id: string, data: UpdateScheduledReportInput) =>
+      ApiClient.request<ScheduledReport>(`/analytics/reports/scheduled/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteScheduledReport: (id: string) =>
+      ApiClient.request<{ success: boolean }>(`/analytics/reports/scheduled/${id}`, {
+        method: 'DELETE',
+      }),
+    runScheduledReport: (id: string) =>
+      ApiClient.request<any>(`/analytics/reports/scheduled/${id}/run`, {
+        method: 'POST',
+      }),
+  };
+
+  // ==========================================
+  // Phase 14: Onboarding API
+  // ==========================================
+  public static onboarding = {
+    register: (data: ClinicRegistrationInput) =>
+      ApiClient.request<ClinicRegistrationResponse>('/onboarding/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getStatus: () => ApiClient.request<TenantOnboardingStatus>('/onboarding/status'),
+    complete: (data: CompleteOnboardingInput) =>
+      ApiClient.request<{ success: boolean; message: string }>('/onboarding/complete', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  };
+
+  // ==========================================
+  // Phase 14: Tenant Subscription API
+  // ==========================================
+  public static subscription = {
+    getCurrent: () => ApiClient.request<TenantSubscription | null>('/subscription'),
+    getPlans: () => ApiClient.request<SubscriptionPlan[]>('/subscription/plans'),
+    getUsage: () => ApiClient.request<TenantUsageSummary>('/subscription/usage'),
+    upgrade: (data: UpgradePlanInput) =>
+      ApiClient.request<{ subscription: TenantSubscription; invoice: SubscriptionInvoice }>(
+        '/subscription/upgrade',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        },
+      ),
+    downgrade: (data: DowngradePlanInput) =>
+      ApiClient.request<TenantSubscription>('/subscription/downgrade', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    cancel: (data: CancelSubscriptionInput) =>
+      ApiClient.request<TenantSubscription>('/subscription/cancel', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    reactivate: () =>
+      ApiClient.request<TenantSubscription>('/subscription/reactivate', {
+        method: 'POST',
+      }),
+    getInvoices: (page = 1, limit = 20) =>
+      ApiClient.request<PaginatedResult<SubscriptionInvoice>>(
+        `/subscription/invoices?page=${page}&limit=${limit}`,
+      ),
+    getInvoice: (id: string) => ApiClient.request<SubscriptionInvoice>(`/subscription/invoices/${id}`),
+    submitManualPayment: (data: SubmitPaymentProofInput) =>
+      ApiClient.request<SubscriptionPayment>('/subscription/payments/manual', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    initiateCardPayment: (invoiceId: string, redirectUrl?: string) =>
+      ApiClient.request<any>('/subscription/payments/card/initiate', {
+        method: 'POST',
+        body: JSON.stringify({ invoiceId, redirectUrl }),
+      }),
+  };
+
+  // ==========================================
+  // Phase 14: Super-Admin Platform API
+  // ==========================================
+  public static platform = {
+    getOverview: () => ApiClient.request<PlatformOverviewMetrics>('/platform/overview'),
+    getTenants: (params?: { search?: string; status?: string; planCode?: string; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.status) q.append('status', params.status);
+      if (params?.planCode) q.append('planCode', params.planCode);
+      if (params?.page) q.append('page', String(params.page));
+      if (params?.limit) q.append('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<any>>(`/platform/tenants?${q.toString()}`);
+    },
+    getTenant: (id: string) => ApiClient.request<any>(`/platform/tenants/${id}`),
+    handleTenantAction: (id: string, data: TenantStatusActionInput) =>
+      ApiClient.request<{ success: boolean; message: string }>(`/platform/tenants/${id}/action`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    grantOverride: (id: string, data: GrantEntitlementOverrideInput) =>
+      ApiClient.request<TenantEntitlementOverride>(`/platform/tenants/${id}/overrides`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    grantCredit: (id: string, data: GrantPromotionalCreditInput) =>
+      ApiClient.request<PromotionalCredit>(`/platform/tenants/${id}/credits`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getPlans: () => ApiClient.request<SubscriptionPlan[]>('/platform/plans'),
+    createPlan: (data: CreateSubscriptionPlanInput) =>
+      ApiClient.request<SubscriptionPlan>('/platform/plans', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updatePlan: (id: string, data: UpdateSubscriptionPlanInput) =>
+      ApiClient.request<SubscriptionPlan>(`/platform/plans/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deletePlan: (id: string) =>
+      ApiClient.request<{ success: boolean }>(`/platform/plans/${id}`, {
+        method: 'DELETE',
+      }),
+    getInvoices: (page = 1, limit = 20) =>
+      ApiClient.request<PaginatedResult<SubscriptionInvoice>>(
+        `/platform/invoices?page=${page}&limit=${limit}`,
+      ),
+    getPayments: (params?: { status?: string; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.append('status', params.status);
+      if (params?.page) q.append('page', String(params.page));
+      if (params?.limit) q.append('limit', String(params.limit));
+      return ApiClient.request<PaginatedResult<SubscriptionPayment>>(`/platform/payments?${q.toString()}`);
+    },
+    verifyPayment: (id: string, notes?: string) =>
+      ApiClient.request<any>(`/platform/payments/${id}/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      }),
+    rejectPayment: (id: string, rejectionReason: string) =>
+      ApiClient.request<any>(`/platform/payments/${id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ rejectionReason }),
+      }),
+    getAuditLogs: (page = 1, limit = 20) =>
+      ApiClient.request<PaginatedResult<PlatformAdminAuditLog>>(
+        `/platform/audit-logs?page=${page}&limit=${limit}`,
+      ),
   };
 }

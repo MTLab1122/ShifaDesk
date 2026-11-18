@@ -17,6 +17,9 @@ import {
   UserCheck,
   Calendar,
   ListOrdered,
+  FileText,
+  Pill,
+  Clock,
   MessageSquare,
   Bot,
   PhoneCall,
@@ -26,6 +29,7 @@ import {
   FileBarChart,
   Settings,
   ShieldAlert,
+  CreditCard,
   LogOut,
   Menu,
   X,
@@ -107,6 +111,39 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    title: 'Encounters (EMR)',
+    href: '/dashboard/encounters',
+    icon: FileText,
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.DOCTOR,
+      UserRole.RECEPTIONIST,
+    ],
+  },
+  {
+    title: 'Prescriptions',
+    href: '/dashboard/prescriptions',
+    icon: Pill,
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.DOCTOR,
+      UserRole.RECEPTIONIST,
+    ],
+  },
+  {
+    title: 'Follow-ups',
+    href: '/dashboard/follow-ups',
+    icon: Clock,
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.DOCTOR,
+      UserRole.RECEPTIONIST,
+    ],
+  },
+  {
     title: 'WhatsApp Chat',
     href: '/dashboard/conversations',
     icon: MessageSquare,
@@ -163,10 +200,29 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    title: 'Reports & Analytics',
-    href: '/dashboard/reports',
+    title: 'Analytics & BI',
+    href: '/dashboard/analytics',
     icon: FileBarChart,
-    roles: [UserRole.SUPER_ADMIN, UserRole.CLINIC_ADMIN, UserRole.DOCTOR],
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.DOCTOR,
+      UserRole.ACCOUNTANT,
+      UserRole.LAB_MANAGER,
+      UserRole.RECEPTIONIST,
+    ],
+  },
+  {
+    title: 'Report Builder',
+    href: '/dashboard/analytics/reports',
+    icon: Activity,
+    roles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.CLINIC_ADMIN,
+      UserRole.DOCTOR,
+      UserRole.ACCOUNTANT,
+      UserRole.LAB_MANAGER,
+    ],
   },
   {
     title: 'Notifications',
@@ -185,6 +241,18 @@ const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/audit-logs',
     icon: ShieldAlert,
     roles: [UserRole.SUPER_ADMIN, UserRole.CLINIC_ADMIN],
+  },
+  {
+    title: 'Subscription',
+    href: '/dashboard/subscription',
+    icon: CreditCard,
+    roles: [UserRole.SUPER_ADMIN, UserRole.CLINIC_ADMIN, UserRole.ACCOUNTANT],
+  },
+  {
+    title: 'Platform Admin',
+    href: '/dashboard/platform',
+    icon: ShieldAlert,
+    roles: [UserRole.SUPER_ADMIN],
   },
   {
     title: 'Settings',
@@ -251,11 +319,10 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 z-50 h-screen bg-card border-r border-border transition-all duration-300 flex flex-col justify-between ${
-          mobileMenuOpen
-            ? 'translate-x-0 w-64'
-            : '-translate-x-full md:translate-x-0'
-        } ${sidebarCollapsed ? 'md:w-20' : 'md:w-64'}`}
+        className={`fixed md:sticky top-0 z-50 h-screen bg-card border-r border-border transition-all duration-300 flex flex-col justify-between ${mobileMenuOpen
+          ? 'translate-x-0 w-64'
+          : '-translate-x-full md:translate-x-0'
+          } ${sidebarCollapsed ? 'md:w-20' : 'md:w-64'}`}
       >
         <div>
           {/* Brand Header */}
@@ -292,11 +359,10 @@ export default function DashboardLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-clinical-600 text-white shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                    ? 'bg-clinical-600 text-white shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
                   title={sidebarCollapsed ? item.title : undefined}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -357,11 +423,10 @@ export default function DashboardLayout({
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
-                  className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                    language === lang
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${language === lang
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                 >
                   {LANGUAGES[lang].nativeName}
                 </button>

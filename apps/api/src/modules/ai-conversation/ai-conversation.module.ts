@@ -17,7 +17,7 @@ import { AiFaqController } from './ai-faq.controller';
 @Module({
   imports: [
     DatabaseModule,
-    AppointmentModule,
+    forwardRef(() => AppointmentModule),
     QueueModule,
     forwardRef(() => WhatsAppModule),
   ],

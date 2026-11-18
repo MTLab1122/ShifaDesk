@@ -77,6 +77,21 @@ model Organization {
   expenses                  Expense[]
   cashRegisterSessions      CashRegisterSession[]
   financialAuditLogs        FinancialAuditLog[]
+  encounters                ClinicalEncounter[]
+  prescriptions             Prescription[]
+  patientMedicalHistories   PatientMedicalHistory[]
+  savedReportConfigurations SavedReportConfiguration[]
+  scheduledReports          ScheduledReport[]
+  analyticsExportLogs       AnalyticsExportLog[]
+  analyticsAccessLogs       AnalyticsAccessLog[]
+  subscriptions             TenantSubscription[]
+  subscriptionInvoices      SubscriptionInvoice[]
+  subscriptionPayments      SubscriptionPayment[]
+  tenantEntitlementOverrides TenantEntitlementOverride[]
+  usageEvents               UsageEvent[]
+  usagePeriodSummaries      UsagePeriodSummary[]
+  trialRecord               TrialRecord?
+  promotionalCredits        PromotionalCredit[]
 
   @@index([slug])
   @@index([status])
@@ -145,6 +160,13 @@ model Clinic {
   financialAdjustments       FinancialAdjustment[]
   expenses                   Expense[]
   cashRegisterSessions       CashRegisterSession[]
+  encounters                 ClinicalEncounter[]
+  prescriptions              Prescription[]
+  savedReportConfigurations  SavedReportConfiguration[]
+  scheduledReports           ScheduledReport[]
+  analyticsExportLogs        AnalyticsExportLog[]
+  analyticsAccessLogs        AnalyticsAccessLog[]
+  usageEvents                UsageEvent[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -184,6 +206,15 @@ model UserProfile {
   collectedPayments         Payment[] @relation("PaymentCollectedBy")
   openedCashSessions        CashRegisterSession[] @relation("CashSessionOpenedBy")
   closedCashSessions        CashRegisterSession[] @relation("CashSessionClosedBy")
+  savedReportConfigurations SavedReportConfiguration[] @relation("ReportConfigCreatedBy")
+  scheduledReports          ScheduledReport[] @relation("ScheduledReportCreatedBy")
+  analyticsExportLogs       AnalyticsExportLog[] @relation("AnalyticsExportedBy")
+  analyticsAccessLogs       AnalyticsAccessLog[] @relation("AnalyticsAccessedBy")
+  verifiedSubscriptionPayments SubscriptionPayment[] @relation("SubscriptionPaymentVerifiedBy")
+  grantedEntitlementOverrides  TenantEntitlementOverride[] @relation("EntitlementOverrideGrantedBy")
+  grantedPromotionalCredits    PromotionalCredit[] @relation("PromotionalCreditGrantedBy")
+  platformAdminAuditLogs       PlatformAdminAuditLog[] @relation("PlatformAdminActor")
+  trialRecords                 TrialRecord[] @relation("TrialRecordUser")
 
   @@index([authUserId])
   @@index([email])
@@ -284,6 +315,8 @@ model Doctor {
   queueSettings      ClinicQueueSettings[]
   queueSessions      ClinicQueueSession[]
   orderedLaboratoryOrders LaboratoryOrder[]
+  encounters         ClinicalEncounter[]
+  prescriptions      Prescription[]
 
   @@unique([clinicId, registrationNumber])
   @@index([organizationId])
@@ -370,6 +403,10 @@ model Patient {
   laboratoryReportAccessTokens LaboratoryReportAccessToken[]
   invoices          Invoice[]
   payments          Payment[]
+  encounters        ClinicalEncounter[]
+  prescriptions     Prescription[]
+  medicalHistory    PatientMedicalHistory?
+  observations      PatientObservation[]
 
   @@unique([organizationId, patientNumber])
   @@index([organizationId])
@@ -464,6 +501,7 @@ model Appointment {
   queueTokens   QueueToken[]
   laboratoryOrders LaboratoryOrder[]
   invoices      Invoice[]
+  encounters    ClinicalEncounter[]
 
   @@unique([organizationId, appointmentNumber])
   @@index([organizationId])
@@ -593,6 +631,7 @@ model QueueToken {
   appointment   Appointment?         @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   patient       Patient              @relation(fields: [patientId], references: [id], onDelete: Cascade)
   statusHistory QueueStatusHistory[]
+  encounters    ClinicalEncounter[]
 
   @@unique([queueSessionId, tokenNumber])
   @@index([organizationId])
@@ -1424,6 +1463,7 @@ model LaboratoryOrder {
   patientId              String    @map("patient_id")
   orderingDoctorId       String?   @map("ordering_doctor_id")
   appointmentId          String?   @map("appointment_id")
+  encounterId            String?   @map("encounter_id")
   orderReference         String    @unique @map("order_reference") // e.g. LAB-202611-0012
   orderStatus            String    @default("REGISTERED") @map("order_status") // DRAFT, REGISTERED, CONFIRMED, SAMPLE_PENDING, SAMPLE_COLLECTED, PROCESSING, RESULTS_PENDING, UNDER_REVIEW, APPROVED, REPORT_READY, DELIVERED, CANCELLED
   totalAmount            Float     @default(0) @map("total_amount")
@@ -1440,6 +1480,7 @@ model LaboratoryOrder {
   patient        Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
   orderingDoctor Doctor?               @relation(fields: [orderingDoctorId], references: [id], onDelete: SetNull)
   appointment    Appointment?          @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  encounter      ClinicalEncounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   items          LaboratoryOrderItem[]
   samples        LaboratorySample[]
   reports        LaboratoryReport[]
@@ -1449,6 +1490,8 @@ model LaboratoryOrder {
   @@index([clinicId])
   @@index([patientId])
   @@index([orderingDoctorId])
+  @@index([appointmentId])
+  @@index([encounterId])
   @@index([orderStatus])
   @@index([createdAt])
   @@map("laboratory_orders")
@@ -1682,6 +1725,7 @@ model Invoice {
   patientId          String    @map("patient_id")
   appointmentId      String?   @map("appointment_id")
   laboratoryOrderId  String?   @map("laboratory_order_id")
+  encounterId        String?   @map("encounter_id")
   invoiceReference   String    @unique @map("invoice_reference") // INV-YYYYMM-XXXX
   relatedEntityType  String?   @map("related_entity_type") // APPOINTMENT, LABORATORY_ORDER, CONSULTATION, GENERAL
   relatedEntityId    String?   @map("related_entity_id")
@@ -1709,6 +1753,7 @@ model Invoice {
   patient            Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
   appointment        Appointment?           @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   laboratoryOrder    LaboratoryOrder?       @relation(fields: [laboratoryOrderId], references: [id], onDelete: SetNull)
+  encounter          ClinicalEncounter?     @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   createdBy          UserProfile?           @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items              InvoiceItem[]
   payments           Payment[]
@@ -1719,6 +1764,7 @@ model Invoice {
   @@index([organizationId])
   @@index([clinicId])
   @@index([patientId])
+  @@index([encounterId])
   @@index([status])
   @@index([relatedEntityType, relatedEntityId])
   @@index([createdAt])
@@ -2007,6 +2053,813 @@ model FinancialAuditLog {
   @@index([createdAt])
   @@map("financial_audit_logs")
 }
+
+// ==========================================
+// Phase 12: Clinical Encounter & EMR-Lite Models
+// ==========================================
+
+/// Core patient clinical consultation encounter
+model ClinicalEncounter {
+  id                 String    @id @default(uuid())
+  organizationId     String    @map("organization_id")
+  clinicId           String    @map("clinic_id")
+  patientId          String    @map("patient_id")
+  doctorId           String    @map("doctor_id")
+  appointmentId      String?   @map("appointment_id")
+  queueTokenId       String?   @map("queue_token_id")
+  encounterReference String    @unique @map("encounter_reference") // ENC-YYYYMM-XXXX
+  encounterDate      String    @map("encounter_date") // YYYY-MM-DD
+  startTime          String    @map("start_time") // HH:mm
+  endTime            String?   @map("end_time") // HH:mm
+  timezone           String    @default("Asia/Karachi")
+  status             String    @default("SCHEDULED") @map("status") // SCHEDULED, CHECKED_IN, IN_PROGRESS, PENDING_REVIEW, COMPLETED, CANCELLED
+  source             String    @default("WALK_IN") @map("source") // APPOINTMENT, WALK_IN, DOCTOR_INITIATED, RECEPTIONIST_ASSISTED
+  type               String    @default("GENERAL_CONSULTATION") @map("type") // GENERAL_CONSULTATION, FOLLOW_UP, EMERGENCY, TELEMEDICINE, ROUTINE_CHECKUP
+  isFinalized        Boolean   @default(false) @map("is_finalized")
+  finalizedAt        DateTime? @map("finalized_at")
+  finalizedById      String?   @map("finalized_by_id")
+  cancellationReason String?   @map("cancellation_reason")
+  createdById        String?   @map("created_by_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic           Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient          Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor           Doctor                    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointment      Appointment?              @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  queueToken       QueueToken?               @relation(fields: [queueTokenId], references: [id], onDelete: SetNull)
+  statusHistory    EncounterStatusHistory[]
+  clinicalNote     ClinicalNote?
+  observations     PatientObservation[]
+  diagnoses        EncounterDiagnosis[]
+  prescriptions    Prescription[]
+  laboratoryOrders LaboratoryOrder[]
+  invoices         Invoice[]
+  followups        EncounterFollowup[]
+  amendments       EncounterAmendment[]
+  documentVersions ClinicalDocumentVersion[]
+
+  @@unique([organizationId, encounterReference])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([appointmentId])
+  @@index([queueTokenId])
+  @@index([status])
+  @@index([encounterDate])
+  @@index([createdAt])
+  @@map("clinical_encounters")
+}
+
+/// Historical audit of clinical encounter status transitions
+model EncounterStatusHistory {
+  id           String   @id @default(uuid())
+  encounterId  String   @map("encounter_id")
+  fromStatus   String?  @map("from_status")
+  toStatus     String   @map("to_status")
+  changeReason String?  @map("change_reason")
+  changedById  String?  @map("changed_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([createdAt])
+  @@map("encounter_status_history")
+}
+
+/// Structured consultation notes entered by the attending doctor
+model ClinicalNote {
+  id                      String   @id @default(uuid())
+  encounterId             String   @unique @map("encounter_id")
+  chiefComplaint          String   @map("chief_complaint")
+  patientReportedSymptoms String?  @map("patient_reported_symptoms")
+  visitPurpose            String?  @map("visit_purpose")
+  visitContext            String?  @map("visit_context")
+  examinationNotes        String?  @map("examination_notes")
+  clinicalAssessment      String?  @map("clinical_assessment")
+  treatmentPlan           String?  @map("treatment_plan")
+  remarks                 String?
+  recordedById            String?  @map("recorded_by_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@map("clinical_notes")
+}
+
+/// Longitudinal medical profile and clinical history for a patient
+model PatientMedicalHistory {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  patientId          String   @unique @map("patient_id")
+  conditions         String?  // JSON string of existing medical conditions
+  surgeries          String?  // JSON string of previous surgical procedures
+  allergies          String?  // JSON string of known drug/food/environmental allergies
+  familyHistory      String?  @map("family_history")
+  socialHistory      String?  @map("social_history")
+  currentMedications String?  @map("current_medications")
+  lastUpdatedById    String?  @map("last_updated_by_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient      Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("patient_medical_histories")
+}
+
+/// Clinical observations and vital signs recorded during an encounter
+model PatientObservation {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  clinicId         String    @map("clinic_id")
+  patientId        String    @map("patient_id")
+  encounterId      String?   @map("encounter_id")
+  systolicBp       Int?      @map("systolic_bp") // mmHg
+  diastolicBp      Int?      @map("diastolic_bp") // mmHg
+  pulseRate        Int?      @map("pulse_rate") // bpm
+  temperature      Float?    // value
+  temperatureUnit  String    @default("C") @map("temperature_unit") // C or F
+  respiratoryRate  Int?      @map("respiratory_rate") // breaths/min
+  oxygenSaturation Int?      @map("oxygen_saturation") // % (SpO2)
+  heightCm         Float?    @map("height_cm") // cm
+  weightKg         Float?    @map("weight_kg") // kg
+  bmi              Float?    // Calculated only when height & weight exist
+  measuredAt       DateTime  @default(now()) @map("measured_at")
+  recordedById     String?   @map("recorded_by_id")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  patient   Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounter ClinicalEncounter? @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([encounterId])
+  @@index([measuredAt])
+  @@map("patient_observations")
+}
+
+/// Doctor-entered diagnoses and clinical classifications
+model EncounterDiagnosis {
+  id                   String   @id @default(uuid())
+  encounterId          String   @map("encounter_id")
+  patientId            String   @map("patient_id")
+  diagnosisDescription String   @map("diagnosis_description")
+  diagnosisCode        String?  @map("diagnosis_code")
+  codingSystem         String   @default("CUSTOM") @map("coding_system") // ICD-10, CUSTOM, NONE
+  type                 String   @default("PRIMARY") // PRIMARY, SECONDARY
+  clinicalStatus       String   @default("CONFIRMED") @map("clinical_status") // CONFIRMED, PROVISIONAL, DIFFERENTIAL, RESOLVED
+  notes                String?
+  diagnosedById        String?  @map("diagnosed_by_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([patientId])
+  @@index([type])
+  @@map("encounter_diagnoses")
+}
+
+/// Doctor-issued outpatient medication prescription
+model Prescription {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  clinicId              String    @map("clinic_id")
+  encounterId           String    @map("encounter_id")
+  patientId             String    @map("patient_id")
+  doctorId              String    @map("doctor_id")
+  prescriptionReference String    @unique @map("prescription_reference") // RX-YYYYMM-XXXX
+  version               Int       @default(1)
+  status                String    @default("ACTIVE") // DRAFT, ACTIVE, AMENDED, CANCELLED, DISPENSED
+  cancellationReason    String?   @map("cancellation_reason")
+  notes                 String?
+  issuedAt              DateTime  @default(now()) @map("issued_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic                  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  encounter    ClinicalEncounter       @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  patient      Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor       Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  items        PrescriptionItem[]
+  amendments   PrescriptionAmendment[]
+
+  @@unique([organizationId, prescriptionReference])
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([encounterId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("prescriptions")
+}
+
+/// Prescribed pharmaceutical medication items
+model PrescriptionItem {
+  id             String   @id @default(uuid())
+  prescriptionId String   @map("prescription_id")
+  medicationName String   @map("medication_name")
+  genericName    String?  @map("generic_name")
+  strength       String
+  dosageForm     String   @default("Tablet") @map("dosage_form")
+  dosage         String
+  route          String   @default("Oral")
+  frequency      String
+  duration       String
+  quantity       Int?
+  instructions   String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@map("prescription_items")
+}
+
+/// Audit ledger for prescription amendments and modifications
+model PrescriptionAmendment {
+  id               String   @id @default(uuid())
+  prescriptionId   String   @map("prescription_id")
+  version          Int
+  reason           String
+  amendedById      String   @map("amended_by_id")
+  previousSnapshot String   @map("previous_snapshot") // JSON
+  newSnapshot      String   @map("new_snapshot") // JSON
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@map("prescription_amendments")
+}
+
+/// Doctor-scheduled follow-up consultation records
+model EncounterFollowup {
+  id                     String   @id @default(uuid())
+  encounterId            String   @map("encounter_id")
+  clinicId               String   @map("clinic_id")
+  patientId              String   @map("patient_id")
+  doctorId               String   @map("doctor_id")
+  followupRequired       Boolean  @default(true) @map("followup_required")
+  recommendedDate        String   @map("recommended_date") // YYYY-MM-DD
+  instructions           String
+  status                 String   @default("PENDING") // PENDING, SCHEDULED, COMPLETED, CANCELLED
+  scheduledAppointmentId String?  @map("scheduled_appointment_id")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([recommendedDate])
+  @@index([status])
+  @@map("encounter_followups")
+}
+
+/// Immutable audit record of authorized post-finalization encounter amendments
+model EncounterAmendment {
+  id                String   @id @default(uuid())
+  encounterId       String   @map("encounter_id")
+  versionNumber     Int      @map("version_number")
+  amendmentReason   String   @map("amendment_reason")
+  amendedById       String   @map("amended_by_id")
+  previousStateJson String   @map("previous_state_json")
+  amendedStateJson  String   @map("amended_state_json")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@map("encounter_amendments")
+}
+
+/// Immutable clinical document versions generated upon encounter finalization
+model ClinicalDocumentVersion {
+  id            String    @id @default(uuid())
+  encounterId   String    @map("encounter_id")
+  documentType  String    @map("document_type") // ENCOUNTER_SUMMARY, PRESCRIPTION, DISCHARGE_SUMMARY
+  versionNumber Int       @map("version_number")
+  documentTitle String    @map("document_title")
+  contentJson   String    @map("content_json")
+  isFinal       Boolean   @default(true) @map("is_final")
+  signedById    String?   @map("signed_by_id")
+  signedAt      DateTime? @map("signed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  @@index([encounterId])
+  @@map("clinical_document_versions")
+}
+
+// ==========================================
+// Phase 13: Advanced Analytics & BI Models
+// ==========================================
+
+/// Custom saved report configurations created via Report Builder
+model SavedReportConfiguration {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  name           String
+  description    String?
+  category       String   // EXECUTIVE, APPOINTMENTS, QUEUE, PATIENTS, STAFF, LABORATORY, FINANCE, COMMUNICATIONS, AI_USAGE
+  dimensions     Json     @default("[]") // array of dimension keys
+  metrics        Json     @default("[]") // array of metric keys
+  filtersJson    Json     @default("{}") @map("filters_json") // applied filter state
+  grouping       String?  // DAY, WEEK, MONTH, DOCTOR, CLINIC, STATUS, CATEGORY, TENDER
+  createdById    String   @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic           Clinic?           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  createdBy        UserProfile       @relation("ReportConfigCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  scheduledReports ScheduledReport[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([category])
+  @@map("saved_report_configurations")
+}
+
+/// Automated recurring scheduled reports
+model ScheduledReport {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  clinicId              String?   @map("clinic_id")
+  reportConfigurationId String    @map("report_configuration_id")
+  name                  String
+  frequency             String    // DAILY, WEEKLY, MONTHLY
+  recipients            String[]  // array of target email addresses or user IDs
+  exportFormat          String    @default("PDF") @map("export_format") // PDF, CSV, XLSX
+  status                String    @default("ACTIVE") // ACTIVE, PAUSED, CANCELLED
+  lastRunAt             DateTime? @map("last_run_at")
+  nextRunAt             DateTime? @map("next_run_at")
+  createdById           String    @map("created_by_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic              Clinic?                  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  reportConfiguration SavedReportConfiguration @relation(fields: [reportConfigurationId], references: [id], onDelete: Cascade)
+  createdBy           UserProfile              @relation("ScheduledReportCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  runs                ScheduledReportRun[]
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([frequency])
+  @@index([status])
+  @@map("scheduled_reports")
+}
+
+/// Execution history and delivery status for scheduled reports
+model ScheduledReportRun {
+  id                  String    @id @default(uuid())
+  scheduledReportId   String    @map("scheduled_report_id")
+  organizationId      String    @map("organization_id")
+  runStatus           String    @default("PENDING") @map("run_status") // PENDING, SUCCESS, FAILED
+  rowCount            Int       @default(0) @map("row_count")
+  recipientsDelivered String[]  @map("recipients_delivered")
+  failureReason       String?   @map("failure_reason")
+  executionDurationMs Int       @default(0) @map("execution_duration_ms")
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+
+  scheduledReport ScheduledReport @relation(fields: [scheduledReportId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledReportId])
+  @@index([organizationId])
+  @@index([runStatus])
+  @@map("scheduled_report_runs")
+}
+
+/// Audit log of generated report downloads and exports (PDF/CSV/XLSX)
+model AnalyticsExportLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  reportName     String   @map("report_name")
+  category       String   // EXECUTIVE, APPOINTMENTS, QUEUE, PATIENTS, STAFF, LABORATORY, FINANCE, COMMUNICATIONS, AI_USAGE
+  exportFormat   String   @map("export_format") // PDF, CSV, XLSX
+  filtersApplied Json     @default("{}") @map("filters_applied")
+  rowCount       Int      @default(0) @map("row_count")
+  fileSizeBytes  Int      @default(0) @map("file_size_bytes")
+  exportedById   String   @map("exported_by_id")
+  exportedAt     DateTime @default(now()) @map("exported_at")
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  exportedBy   UserProfile  @relation("AnalyticsExportedBy", fields: [exportedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([category])
+  @@index([exportedById])
+  @@index([exportedAt])
+  @@map("analytics_export_logs")
+}
+
+/// Audit log for accessing analytics dashboards and sensitive reporting views
+model AnalyticsAccessLog {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  clinicId        String?  @map("clinic_id")
+  dashboardView   String   @map("dashboard_view") // EXECUTIVE, APPOINTMENTS, QUEUE, PATIENTS, STAFF, LABORATORY, FINANCE, COMMUNICATIONS, AI_USAGE
+  accessedById    String   @map("accessed_by_id")
+  accessedAt      DateTime @default(now()) @map("accessed_at")
+  queryFilters    Json?    @map("query_filters")
+  executionTimeMs Int      @default(0) @map("execution_time_ms")
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic       Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  accessedBy   UserProfile  @relation("AnalyticsAccessedBy", fields: [accessedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([dashboardView])
+  @@index([accessedById])
+  @@index([accessedAt])
+  @@map("analytics_access_logs")
+}
+
+/// ============================================================================
+/// PHASE 14: SAAS SUBSCRIPTION, TENANT ONBOARDING & PLATFORM ADMINISTRATION
+/// ============================================================================
+
+/// Configurable platform subscription plans (Starter, Professional, Laboratory, etc.)
+model SubscriptionPlan {
+  id                String   @id @default(uuid())
+  name              String
+  code              String   @unique
+  description       String?
+  monthlyPricePaisa Int      @map("monthly_price_paisa")
+  annualPricePaisa  Int      @map("annual_price_paisa")
+  currency          String   @default("PKR")
+  trialDays         Int      @default(14) @map("trial_days")
+  isActive          Boolean  @default(true) @map("is_active")
+  displayOrder      Int      @default(0) @map("display_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  versions          SubscriptionPlanVersion[]
+  subscriptions     TenantSubscription[]
+  trialRecords      TrialRecord[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("subscription_plans")
+}
+
+/// Versioned subscription plan specifications preserving historical pricing
+model SubscriptionPlanVersion {
+  id                String   @id @default(uuid())
+  planId            String   @map("plan_id")
+  version           Int      @default(1)
+  monthlyPricePaisa Int      @map("monthly_price_paisa")
+  annualPricePaisa  Int      @map("annual_price_paisa")
+  currency          String   @default("PKR")
+  effectiveFrom     DateTime @default(now()) @map("effective_from")
+  effectiveTo       DateTime? @map("effective_to")
+  features          Json     @default("[]")
+  limits            Json     @default("{}")
+  overagePolicy     String   @default("BLOCK") @map("overage_policy")
+  gracePeriodDays   Int      @default(7) @map("grace_period_days")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  plan              SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  entitlements      PlanEntitlement[]
+  subscriptions     TenantSubscription[]
+
+  @@unique([planId, version])
+  @@index([planId])
+  @@map("subscription_plan_versions")
+}
+
+/// Feature entitlements configured for a specific plan version
+model PlanEntitlement {
+  id            String   @id @default(uuid())
+  planVersionId String   @map("plan_version_id")
+  featureCode   String   @map("feature_code")
+  isIncluded    Boolean  @default(true) @map("is_included")
+  limitType     String   @default("UNLIMITED") @map("limit_type") // UNLIMITED, COUNT, BOOLEAN
+  limitValue    Int      @default(0) @map("limit_value")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  planVersion   SubscriptionPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([planVersionId, featureCode])
+  @@index([planVersionId])
+  @@index([featureCode])
+  @@map("plan_entitlements")
+}
+
+/// Active and historical subscription instances for organizations/tenants
+model TenantSubscription {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  planId             String   @map("plan_id")
+  planVersionId      String   @map("plan_version_id")
+  status             String   @default("TRIALING") // PENDING, TRIALING, ACTIVE, PAST_DUE, GRACE_PERIOD, SUSPENDED, CANCELLED, EXPIRED
+  billingInterval    String   @default("MONTHLY") @map("billing_interval") // MONTHLY, ANNUAL
+  currentPeriodStart DateTime @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+  trialStart         DateTime? @map("trial_start")
+  trialEnd           DateTime? @map("trial_end")
+  gracePeriodEnd     DateTime? @map("grace_period_end")
+  cancelAtPeriodEnd  Boolean  @default(false) @map("cancel_at_period_end")
+  cancelledAt        DateTime? @map("cancelled_at")
+  cancellationReason String?  @map("cancellation_reason")
+  unitPricePaisa     Int      @default(0) @map("unit_price_paisa")
+  currency           String   @default("PKR")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan               SubscriptionPlan         @relation(fields: [planId], references: [id])
+  planVersion        SubscriptionPlanVersion  @relation(fields: [planVersionId], references: [id])
+  invoices           SubscriptionInvoice[]
+  statusHistories    SubscriptionStatusHistory[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@map("tenant_subscriptions")
+}
+
+/// Audit ledger for subscription lifecycle status transitions
+model SubscriptionStatusHistory {
+  id             String   @id @default(uuid())
+  subscriptionId String   @map("subscription_id")
+  previousStatus String?  @map("previous_status")
+  newStatus      String   @map("new_status")
+  reason         String?
+  changedById    String?  @map("changed_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  subscription   TenantSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@map("subscription_status_histories")
+}
+
+/// SaaS subscription invoices issued to tenant organizations (SUB-YYYYMM-XXXX)
+model SubscriptionInvoice {
+  id                  String   @id @default(uuid())
+  invoiceNumber       String   @unique @map("invoice_number")
+  organizationId      String   @map("organization_id")
+  subscriptionId      String?  @map("subscription_id")
+  planVersionSnapshot Json     @map("plan_version_snapshot")
+  status              String   @default("ISSUED") // DRAFT, ISSUED, PARTIALLY_PAID, PAID, OVERDUE, CANCELLED, VOIDED
+  billingPeriodStart  DateTime @map("billing_period_start")
+  billingPeriodEnd    DateTime @map("billing_period_end")
+  currency            String   @default("PKR")
+  subtotalPaisa       Int      @default(0) @map("subtotal_paisa")
+  discountPaisa       Int      @default(0) @map("discount_paisa")
+  taxPaisa            Int      @default(0) @map("tax_paisa")
+  totalPaisa          Int      @default(0) @map("total_paisa")
+  amountPaidPaisa     Int      @default(0) @map("amount_paid_paisa")
+  outstandingPaisa    Int      @default(0) @map("outstanding_paisa")
+  issueDate           DateTime @default(now()) @map("issue_date")
+  dueDate             DateTime @map("due_date")
+  paidAt              DateTime? @map("paid_at")
+  notes               String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription        TenantSubscription?      @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  items               SubscriptionInvoiceItem[]
+  payments            SubscriptionPayment[]
+
+  @@index([organizationId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("subscription_invoices")
+}
+
+/// Line items on SaaS subscription invoices
+model SubscriptionInvoiceItem {
+  id             String   @id @default(uuid())
+  invoiceId      String   @map("invoice_id")
+  description    String
+  itemType       String   @default("PLAN_FEE") @map("item_type") // PLAN_FEE, USAGE_OVERAGE, DISCOUNT_CREDIT, ADJUSTMENT
+  quantity       Int      @default(1)
+  unitPricePaisa Int      @default(0) @map("unit_price_paisa")
+  totalPricePaisa Int     @default(0) @map("total_price_paisa")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  invoice        SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("subscription_invoice_items")
+}
+
+/// SaaS subscription payments made by tenant organizations (SPAY-YYYYMM-XXXX)
+model SubscriptionPayment {
+  id                    String   @id @default(uuid())
+  paymentNumber         String   @unique @map("payment_number")
+  invoiceId             String   @map("invoice_id")
+  organizationId        String   @map("organization_id")
+  amountPaisa           Int      @map("amount_paisa")
+  currency              String   @default("PKR")
+  paymentMethod         String   @map("payment_method") // MANUAL_BANK_TRANSFER, CARD, RAAST, PROMOTIONAL_CREDIT
+  status                String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED, REVERSED, REFUNDED
+  provider              String   @default("MANUAL") // MANUAL, SAFEPAY, RAAST, PROMO
+  providerTransactionId String?  @map("provider_transaction_id")
+  paymentReference      String?  @map("payment_reference")
+  proofDocumentUrl      String?  @map("proof_document_url")
+  verifiedById          String?  @map("verified_by_id")
+  verifiedAt            DateTime? @map("verified_at")
+  rejectionReason       String?  @map("rejection_reason")
+  idempotencyKey        String?  @unique @map("idempotency_key")
+  metadata              Json     @default("{}")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  invoice               SubscriptionInvoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  organization          Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  verifiedBy            UserProfile?              @relation("SubscriptionPaymentVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  events                SubscriptionPaymentEvent[]
+
+  @@index([invoiceId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([paymentReference])
+  @@map("subscription_payments")
+}
+
+/// Ledger for webhook events and gateway callbacks for subscription payments
+model SubscriptionPaymentEvent {
+  id         String   @id @default(uuid())
+  paymentId  String   @map("payment_id")
+  eventType  String   @map("event_type")
+  payload    Json
+  signature  String?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  payment    SubscriptionPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([eventType])
+  @@map("subscription_payment_events")
+}
+
+/// Tenant-specific feature entitlement overrides granted by platform administrators
+model TenantEntitlementOverride {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  featureCode    String   @map("feature_code")
+  isIncluded     Boolean  @default(true) @map("is_included")
+  limitValue     Int?     @map("limit_value")
+  grantedReason  String   @map("granted_reason")
+  expiresAt      DateTime? @map("expires_at")
+  grantedById    String   @map("granted_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  grantedBy      UserProfile  @relation("EntitlementOverrideGrantedBy", fields: [grantedById], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, featureCode])
+  @@index([organizationId])
+  @@index([featureCode])
+  @@map("tenant_entitlement_overrides")
+}
+
+/// Centralized metered usage events across tenant features
+model UsageEvent {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  clinicId       String?  @map("clinic_id")
+  featureCode    String   @map("feature_code")
+  quantity       Int      @default(1)
+  source         String   // SYSTEM, APPOINTMENT, QUEUE, WHATSAPP, VOICE, LAB, EMR
+  idempotencyKey String?  @unique @map("idempotency_key")
+  metadata       Json     @default("{}")
+  timestamp      DateTime @default(now())
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinic         Clinic?      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([clinicId])
+  @@index([featureCode])
+  @@index([timestamp])
+  @@map("usage_events")
+}
+
+/// Aggregated usage per billing cycle per feature
+model UsagePeriodSummary {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  billingPeriodStart DateTime @map("billing_period_start")
+  billingPeriodEnd   DateTime @map("billing_period_end")
+  featureCode        String   @map("feature_code")
+  totalUsage         Int      @default(0) @map("total_usage")
+  limitValue         Int      @default(0) @map("limit_value")
+  isExceeded         Boolean  @default(false) @map("is_exceeded")
+  lastAggregatedAt   DateTime @default(now()) @map("last_aggregated_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, billingPeriodStart, billingPeriodEnd, featureCode])
+  @@index([organizationId])
+  @@index([featureCode])
+  @@map("usage_period_summaries")
+}
+
+/// Free trial eligibility and lifecycle tracking per tenant
+model TrialRecord {
+  id              String   @id @default(uuid())
+  organizationId  String   @unique @map("organization_id")
+  userProfileId   String   @map("user_profile_id")
+  planId          String   @map("plan_id")
+  startedAt       DateTime @default(now()) @map("started_at")
+  expiresAt       DateTime @map("expires_at")
+  extendedDays    Int      @default(0) @map("extended_days")
+  extensionReason String?  @map("extension_reason")
+  status          String   @default("ACTIVE") // ACTIVE, CONVERTED, EXPIRED, TERMINATED
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userProfile     UserProfile      @relation("TrialRecordUser", fields: [userProfileId], references: [id], onDelete: Cascade)
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([organizationId])
+  @@index([userProfileId])
+  @@index([status])
+  @@map("trial_records")
+}
+
+/// Promotional credits and discount balances applicable to SaaS subscription invoices
+model PromotionalCredit {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  code           String   @unique
+  amountPaisa    Int      @map("amount_paisa")
+  remainingPaisa Int      @map("remaining_paisa")
+  expiresAt      DateTime? @map("expires_at")
+  isActive       Boolean  @default(true) @map("is_active")
+  grantedById    String   @map("granted_by_id")
+  reason         String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  grantedBy      UserProfile  @relation("PromotionalCreditGrantedBy", fields: [grantedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([code])
+  @@index([isActive])
+  @@map("promotional_credits")
+}
+
+/// Tamper-evident audit log for Super-Admin platform operations
+model PlatformAdminAuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String   @map("actor_user_id")
+  action       String   // TENANT_SUSPENDED, TRIAL_EXTENDED, PLAN_CREATED, PAYMENT_VERIFIED, OVERRIDE_GRANTED
+  resourceType String   @map("resource_type") // Tenant, SubscriptionPlan, SubscriptionPayment, TenantSubscription
+  resourceId   String   @map("resource_id")
+  metadata     Json     @default("{}")
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor        UserProfile @relation("PlatformAdminActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("platform_admin_audit_logs")
+}
+
 
 
 

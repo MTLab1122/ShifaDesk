@@ -66,6 +66,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
+    const correlationId =
+      (request as any).correlationId ||
+      (request.headers['x-correlation-id'] as string) ||
+      (request.headers['x-request-id'] as string);
+
     const errorPayload: ApiErrorResponse = {
       success: false,
       statusCode: status,
@@ -74,6 +79,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       errorCode,
       timestamp: new Date().toISOString(),
       path: request.url,
+      ...(correlationId && { correlationId }),
       ...(details && { details }),
     };
 

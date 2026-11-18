@@ -14,6 +14,7 @@ export interface ApiErrorResponse {
   errorCode?: string;
   timestamp: string;
   path?: string;
+  correlationId?: string;
   details?: Record<string, unknown>;
 }
 

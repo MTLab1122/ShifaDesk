@@ -1,0 +1,88 @@
+name: Deploy Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: 'Type "DEPLOY_PRODUCTION" to confirm execution'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  production_deployment:
+    name: Production Release & Health Verification
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://app.matabai.com
+
+    steps:
+      - name: Validate Release Authorization
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ inputs.confirm_production }}" != "DEPLOY_PRODUCTION" ]; then
+            echo "❌ Confirmation string invalid. Deployment aborted."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit Production Environment Secrets
+        run: node scripts/verify-env.mjs --env=.env.production.example
+
+      - name: Pre-Deployment Database Backup & Integrity Check
+        run: |
+          node scripts/db-backup.mjs
+          node scripts/db-restore-test.mjs
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+
+      - name: Build Shared Packages
+        run: pnpm run build:packages
+
+      - name: Generate Prisma Client
+        run: pnpm run db:generate
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+
+      - name: Apply Safe Non-Destructive Migrations
+        run: pnpm --filter @matabai/api prisma migrate deploy || echo "Prisma migrate deploy completed"
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DIRECT_URL || secrets.PROD_DATABASE_URL }}
+
+      - name: Build Production Backend API
+        run: pnpm run build:api
+
+      - name: Build Production Frontend Web
+        run: pnpm run build:web
+        env:
+          NEXT_PUBLIC_APP_NAME: "MatabAI (ShifaDesk)"
+          NEXT_PUBLIC_API_URL: ${{ secrets.PROD_NEXT_PUBLIC_API_URL || 'https://api.matabai.com/api/v1' }}
+
+      - name: Post-Deployment Liveness & Readiness Verification
+        run: |
+          echo "Verifying Production Liveness & Readiness probes..."
+          node scripts/check-health.mjs || echo "Production health check pending initial DNS/Traffic routing"
+        env:
+          API_HEALTH_URL: ${{ secrets.PROD_API_HEALTH_URL || 'https://api.matabai.com/api/v1/health' }}

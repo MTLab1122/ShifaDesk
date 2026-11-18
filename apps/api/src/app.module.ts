@@ -25,6 +25,9 @@ import { VoiceModule } from './modules/voice/voice.module';
 import { LaboratoryModule } from './modules/laboratory/laboratory.module';
 import { ReportModule } from './modules/report/report.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { EncounterModule } from './modules/encounter/encounter.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { SaasModule } from './modules/saas/saas.module';
 
 @Module({
   imports: [
@@ -57,6 +60,9 @@ import { FinanceModule } from './modules/finance/finance.module';
     LaboratoryModule,
     ReportModule,
     FinanceModule,
+    EncounterModule,
+    AnalyticsModule,
+    SaasModule,
   ],
 })
 export class AppModule {}

@@ -377,4 +377,91 @@ export class NotificationSchedulerService {
       this.logger.log(`Enqueued financial notification ${eventType} for ${relatedEntityType} ${relatedEntityId}`);
     }
   }
+
+  /**
+   * Schedule SaaS subscription, trial, and SaaS invoice notifications
+   */
+  async scheduleSubscriptionNotification(params: {
+    organizationId: string;
+    clinicId?: string;
+    recipientUserId: string;
+    eventType: NotificationEventType | string;
+    relatedEntityType: 'SUBSCRIPTION' | 'SAAS_INVOICE' | 'SAAS_PAYMENT' | 'TRIAL';
+    relatedEntityId: string;
+    payload: Record<string, any>;
+  }): Promise<void> {
+    const {
+      organizationId,
+      clinicId,
+      recipientUserId,
+      eventType,
+      relatedEntityType,
+      relatedEntityId,
+      payload,
+    } = params;
+
+    const userProfile = await this.prisma.userProfile.findUnique({
+      where: { id: recipientUserId },
+    });
+
+    if (!userProfile) {
+      this.logger.warn(`Cannot schedule subscription notification: User ${recipientUserId} not found`);
+      return;
+    }
+
+    const idempotencyKey = `sub-${relatedEntityId}-${eventType}-${Date.now()}`;
+
+    let targetClinicId = clinicId;
+    if (!targetClinicId) {
+      const primaryClinic = await this.prisma.clinic.findFirst({
+        where: { organizationId },
+        select: { id: true },
+      });
+      targetClinicId = primaryClinic?.id || '';
+    }
+
+    // 1. In-App notification for instant dashboard visibility
+    await this.prisma.inAppNotification.create({
+      data: {
+        organizationId,
+        clinicId: targetClinicId || null,
+        recipientUserId: userProfile.id,
+        category: 'OPERATIONAL',
+        title: `Subscription Update: ${eventType.replace(/_/g, ' ')}`,
+        message: payload.message || `Your subscription status or SaaS billing event (${eventType}) has been updated.`,
+        relatedEntityType,
+        relatedEntityId,
+      },
+    });
+
+    // 2. Enqueue persistent notification job if clinicId exists
+    if (targetClinicId) {
+      await this.prisma.notificationJob.create({
+        data: {
+          organizationId,
+          clinicId: targetClinicId,
+          recipientId: userProfile.id,
+          recipientType: 'STAFF',
+          eventType,
+          channel: 'IN_APP',
+          templateId: null,
+          relatedEntityType,
+          relatedEntityId,
+          scheduledAt: new Date(),
+          status: NotificationJobStatus.PENDING,
+          idempotencyKey,
+          payload: {
+            ...payload,
+            recipient_name: userProfile.fullName,
+            recipient_email: userProfile.email,
+            recipient_phone: userProfile.phone,
+          },
+          attempts: 0,
+          maxAttempts: 3,
+        },
+      });
+    }
+
+    this.logger.log(`Enqueued subscription notification ${eventType} for ${relatedEntityType} ${relatedEntityId}`);
+  }
 }

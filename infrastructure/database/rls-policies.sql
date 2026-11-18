@@ -1716,10 +1716,811 @@ CREATE POLICY "financial_audit_logs_write" ON financial_audit_logs
     )
   );
 
+-- ==============================================================================
+-- 15. Phase 12: Clinical Encounter & EMR-Lite RLS Policies
+-- ==============================================================================
+
+ALTER TABLE clinical_encounters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE encounter_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinical_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patient_medical_histories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patient_observations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE encounter_diagnoses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prescriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prescription_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prescription_amendments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE encounter_followups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE encounter_amendments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinical_document_versions ENABLE ROW LEVEL SECURITY;
+
+-- 1. Clinical Encounters Policies
+CREATE POLICY "clinical_encounters_staff_select" ON clinical_encounters
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinical_encounters.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "clinical_encounters_patient_select" ON clinical_encounters
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = clinical_encounters.patient_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "clinical_encounters_staff_write" ON clinical_encounters
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = clinical_encounters.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 2. Encounter Status History
+CREATE POLICY "encounter_history_select" ON encounter_status_history
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_status_history.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "encounter_history_write" ON encounter_status_history
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_status_history.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 3. Clinical Notes
+CREATE POLICY "clinical_notes_staff_select" ON clinical_notes
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = clinical_notes.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "clinical_notes_staff_write" ON clinical_notes
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = clinical_notes.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 4. Patient Medical Histories
+CREATE POLICY "medical_histories_staff_select" ON patient_medical_histories
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = patient_medical_histories.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "medical_histories_patient_select" ON patient_medical_histories
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = patient_medical_histories.patient_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "medical_histories_staff_write" ON patient_medical_histories
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = patient_medical_histories.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 5. Patient Observations
+CREATE POLICY "observations_staff_select" ON patient_observations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = patient_observations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "observations_patient_select" ON patient_observations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = patient_observations.patient_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "observations_staff_write" ON patient_observations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = patient_observations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 6. Encounter Diagnoses
+CREATE POLICY "diagnoses_staff_select" ON encounter_diagnoses
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_diagnoses.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "diagnoses_patient_select" ON encounter_diagnoses
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = encounter_diagnoses.patient_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "diagnoses_staff_write" ON encounter_diagnoses
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_diagnoses.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 7. Prescriptions & Items
+CREATE POLICY "prescriptions_staff_select" ON prescriptions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = prescriptions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "prescriptions_patient_select" ON prescriptions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = prescriptions.patient_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "prescriptions_staff_write" ON prescriptions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = prescriptions.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "prescription_items_all" ON prescription_items
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM prescriptions p
+      JOIN organization_memberships om ON p.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE p.id = prescription_items.prescription_id
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "prescription_amendments_all" ON prescription_amendments
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM prescriptions p
+      JOIN organization_memberships om ON p.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE p.id = prescription_amendments.prescription_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 8. Follow-ups
+CREATE POLICY "followups_staff_select" ON encounter_followups
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_followups.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "followups_patient_select" ON encounter_followups
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM patients p
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE p.id = encounter_followups.patient_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "followups_staff_write" ON encounter_followups
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_followups.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 9. Encounter Amendments & Document Versions
+CREATE POLICY "encounter_amendments_all" ON encounter_amendments
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = encounter_amendments.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "document_versions_staff_select" ON clinical_document_versions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = clinical_document_versions.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "document_versions_patient_select" ON clinical_document_versions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN patients p ON ce.patient_id = p.id
+      JOIN user_profiles up ON p.user_profile_id = up.id
+      WHERE ce.id = clinical_document_versions.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND p.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "document_versions_staff_write" ON clinical_document_versions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM clinical_encounters ce
+      JOIN organization_memberships om ON ce.organization_id = om.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ce.id = clinical_document_versions.encounter_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR')
+        AND om.status = 'ACTIVE'
+    )
+  );
 
 
 
 
 
 
+
+
+
+
+-- ==========================================
+-- PHASE 13: ADVANCED ANALYTICS & BI RLS POLICIES
+-- ==========================================
+
+-- 1. saved_report_configurations
+ALTER TABLE saved_report_configurations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "saved_reports_org_read" ON saved_report_configurations
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = saved_report_configurations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'DOCTOR', 'LAB_MANAGER', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "saved_reports_admin_write" ON saved_report_configurations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = saved_report_configurations.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN', 'LAB_MANAGER', 'ACCOUNTANT')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 2. scheduled_reports
+ALTER TABLE scheduled_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "scheduled_reports_admin_read" ON scheduled_reports
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = scheduled_reports.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "scheduled_reports_admin_write" ON scheduled_reports
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = scheduled_reports.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 3. scheduled_report_runs
+ALTER TABLE scheduled_report_runs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "scheduled_report_runs_admin_read" ON scheduled_report_runs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = scheduled_report_runs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 4. analytics_export_logs
+ALTER TABLE analytics_export_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "analytics_export_logs_read" ON analytics_export_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = analytics_export_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 5. analytics_access_logs
+ALTER TABLE analytics_access_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "analytics_access_logs_read" ON analytics_access_logs
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE om.organization_id = analytics_access_logs.organization_id
+        AND up.auth_user_id = auth.uid()
+        AND om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN')
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- ==============================================================================
+-- PHASE 14: SAAS SUBSCRIPTION, TENANT ONBOARDING & PLATFORM ADMINISTRATION
+-- ==============================================================================
+
+-- 1. subscription_plans
+ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_plans_read" ON subscription_plans
+  FOR SELECT
+  USING (true);
+
+CREATE POLICY "subscription_plans_admin_manage" ON subscription_plans
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 2. subscription_plan_versions
+ALTER TABLE subscription_plan_versions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_plan_versions_read" ON subscription_plan_versions
+  FOR SELECT
+  USING (true);
+
+CREATE POLICY "subscription_plan_versions_admin_manage" ON subscription_plan_versions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 3. plan_entitlements
+ALTER TABLE plan_entitlements ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "plan_entitlements_read" ON plan_entitlements
+  FOR SELECT
+  USING (true);
+
+CREATE POLICY "plan_entitlements_admin_manage" ON plan_entitlements
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 4. tenant_subscriptions
+ALTER TABLE tenant_subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "tenant_subscriptions_read" ON tenant_subscriptions
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = tenant_subscriptions.organization_id OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "tenant_subscriptions_manage" ON tenant_subscriptions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = tenant_subscriptions.organization_id AND om.role = 'CLINIC_ADMIN' OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 5. subscription_status_histories
+ALTER TABLE subscription_status_histories ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_status_histories_read" ON subscription_status_histories
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM tenant_subscriptions ts
+      JOIN organization_memberships om ON om.organization_id = ts.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE ts.id = subscription_status_histories.subscription_id
+        AND (om.role IN ('SUPER_ADMIN', 'CLINIC_ADMIN'))
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 6. subscription_invoices
+ALTER TABLE subscription_invoices ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_invoices_read" ON subscription_invoices
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = subscription_invoices.organization_id AND om.role IN ('CLINIC_ADMIN', 'ACCOUNTANT') OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "subscription_invoices_manage" ON subscription_invoices
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 7. subscription_invoice_items
+ALTER TABLE subscription_invoice_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_invoice_items_read" ON subscription_invoice_items
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM subscription_invoices si
+      JOIN organization_memberships om ON om.organization_id = si.organization_id
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE si.id = subscription_invoice_items.invoice_id
+        AND (om.role IN ('CLINIC_ADMIN', 'ACCOUNTANT', 'SUPER_ADMIN'))
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 8. subscription_payments
+ALTER TABLE subscription_payments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_payments_read" ON subscription_payments
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = subscription_payments.organization_id AND om.role IN ('CLINIC_ADMIN', 'ACCOUNTANT') OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "subscription_payments_manage" ON subscription_payments
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = subscription_payments.organization_id AND om.role = 'CLINIC_ADMIN' OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 9. subscription_payment_events
+ALTER TABLE subscription_payment_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_payment_events_admin_only" ON subscription_payment_events
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 10. tenant_entitlement_overrides
+ALTER TABLE tenant_entitlement_overrides ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "tenant_entitlement_overrides_read" ON tenant_entitlement_overrides
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = tenant_entitlement_overrides.organization_id OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "tenant_entitlement_overrides_manage" ON tenant_entitlement_overrides
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 11. usage_events
+ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "usage_events_read" ON usage_events
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = usage_events.organization_id AND om.role IN ('CLINIC_ADMIN', 'SUPER_ADMIN'))
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 12. usage_period_summaries
+ALTER TABLE usage_period_summaries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "usage_period_summaries_read" ON usage_period_summaries
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = usage_period_summaries.organization_id AND om.role IN ('CLINIC_ADMIN', 'SUPER_ADMIN'))
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 13. trial_records
+ALTER TABLE trial_records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "trial_records_read" ON trial_records
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = trial_records.organization_id OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 14. promotional_credits
+ALTER TABLE promotional_credits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "promotional_credits_read" ON promotional_credits
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE (om.organization_id = promotional_credits.organization_id OR om.role = 'SUPER_ADMIN')
+        AND up.auth_user_id = auth.uid()
+        AND om.status = 'ACTIVE'
+    )
+  );
+
+-- 15. platform_admin_audit_logs
+ALTER TABLE platform_admin_audit_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "platform_admin_audit_logs_super_admin" ON platform_admin_audit_logs
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_memberships om
+      JOIN user_profiles up ON om.user_profile_id = up.id
+      WHERE up.auth_user_id = auth.uid()
+        AND om.role = 'SUPER_ADMIN'
+        AND om.status = 'ACTIVE'
+    )
+  );
 

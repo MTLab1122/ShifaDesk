@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as fs from 'node:fs';
 import { PrismaService } from '../../common/database/prisma.service';
 import { HealthCheckResponse, HealthState } from '@matabai/shared';
 
@@ -39,6 +40,59 @@ export class HealthService {
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor((Date.now() - this.processStartTime) / 1000),
       checks,
+    };
+  }
+
+  checkLiveness(): { status: 'ok'; uptimeSeconds: number; timestamp: string } {
+    return {
+      status: 'ok',
+      uptimeSeconds: Math.floor((Date.now() - this.processStartTime) / 1000),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async checkReadiness(): Promise<{
+    status: 'ready' | 'not_ready';
+    database: { ok: boolean; latencyMs: number };
+    storage: { ok: boolean };
+    timestamp: string;
+  }> {
+    const dbPing = await this.prisma.ping();
+
+    let storageOk = true;
+    try {
+      const storagePath = process.env.REPORT_STORAGE_PATH || 'uploads/reports';
+      if (!fs.existsSync(storagePath)) {
+        fs.mkdirSync(storagePath, { recursive: true });
+      }
+    } catch {
+      storageOk = false;
+    }
+
+    const isReady = dbPing.ok && storageOk;
+    return {
+      status: isReady ? 'ready' : 'not_ready',
+      database: { ok: dbPing.ok, latencyMs: dbPing.latencyMs },
+      storage: { ok: storageOk },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  getMetrics() {
+    const mem = process.memoryUsage();
+    return {
+      service: 'matabai-api',
+      uptimeSeconds: Math.floor((Date.now() - this.processStartTime) / 1000),
+      memory: {
+        rssMb: Math.round(mem.rss / 1024 / 1024),
+        heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+      },
+      process: {
+        nodeVersion: process.version,
+        pid: process.pid,
+      },
+      timestamp: new Date().toISOString(),
     };
   }
 }

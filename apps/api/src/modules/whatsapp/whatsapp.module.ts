@@ -8,6 +8,7 @@ import { WhatsAppInboundService } from './whatsapp-inbound.service';
 import { WhatsAppOutboundService } from './whatsapp-outbound.service';
 import { WhatsAppConversationService } from './whatsapp-conversation.service';
 import { WhatsAppNotificationService } from './whatsapp-notification.service';
+import { WhatsAppIntegrationService } from './whatsapp-integration.service';
 import { DatabaseModule } from '../../common/database/database.module';
 import { AIConversationModule } from '../ai-conversation/ai-conversation.module';
 
@@ -28,11 +29,13 @@ import { AIConversationModule } from '../ai-conversation/ai-conversation.module'
     WhatsAppOutboundService,
     WhatsAppConversationService,
     WhatsAppNotificationService,
+    WhatsAppIntegrationService,
   ],
   exports: [
     WhatsAppNotificationService,
     WhatsAppOutboundService,
     WhatsAppConversationService,
+    WhatsAppIntegrationService,
     MetaApiClient,
   ],
 })

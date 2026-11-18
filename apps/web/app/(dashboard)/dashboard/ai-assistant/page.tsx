@@ -256,11 +256,10 @@ export default function AiAssistantPage() {
           {health && (
             <Badge
               variant="outline"
-              className={`px-3 py-1 font-medium ${
-                health.status === 'ACTIVE'
-                  ? 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
-                  : 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-950/30'
-              }`}
+              className={`px-3 py-1 font-medium ${health.status === 'ACTIVE'
+                ? 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
+                : 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-950/30'
+                }`}
             >
               <Zap className="w-3.5 h-3.5 mr-1.5" />
               {health.status} ({health.model})
@@ -270,11 +269,10 @@ export default function AiAssistantPage() {
           <button
             type="button"
             onClick={handleToggleEnable}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-              formSettings.enabled
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-            }`}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${formSettings.enabled
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+              : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
           >
             {formSettings.enabled ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
             {formSettings.enabled ? 'Receptionist Active' : 'Receptionist Paused'}
@@ -295,11 +293,10 @@ export default function AiAssistantPage() {
       <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'settings'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'settings'
+            ? 'border-teal-600 text-teal-600 dark:text-teal-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           <Settings className="w-4 h-4" />
           Settings & Guardrails
@@ -307,11 +304,10 @@ export default function AiAssistantPage() {
 
         <button
           onClick={() => setActiveTab('faqs')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'faqs'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'faqs'
+            ? 'border-teal-600 text-teal-600 dark:text-teal-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           <HelpCircle className="w-4 h-4" />
           Multilingual FAQs ({faqs.length})
@@ -319,11 +315,10 @@ export default function AiAssistantPage() {
 
         <button
           onClick={() => setActiveTab('audit')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'audit'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'audit'
+            ? 'border-teal-600 text-teal-600 dark:text-teal-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           <Activity className="w-4 h-4" />
           Live Audit & Tools
@@ -331,11 +326,10 @@ export default function AiAssistantPage() {
 
         <button
           onClick={() => setActiveTab('metrics')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'metrics'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'metrics'
+            ? 'border-teal-600 text-teal-600 dark:text-teal-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           <BarChart3 className="w-4 h-4" />
           Metrics & Cost
@@ -343,11 +337,10 @@ export default function AiAssistantPage() {
 
         <button
           onClick={() => setActiveTab('simulator')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === 'simulator'
-              ? 'border-teal-600 text-teal-600 dark:text-teal-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === 'simulator'
+            ? 'border-teal-600 text-teal-600 dark:text-teal-400'
+            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           <MessageSquare className="w-4 h-4" />
           Simulator Playground
@@ -647,8 +640,8 @@ export default function AiAssistantPage() {
                             it.outcome === 'HANDOVER'
                               ? 'border-amber-500 text-amber-600'
                               : it.outcome === 'TOOL_EXECUTED'
-                              ? 'border-emerald-500 text-emerald-600'
-                              : 'border-blue-500 text-blue-600'
+                                ? 'border-emerald-500 text-emerald-600'
+                                : 'border-blue-500 text-blue-600'
                           }
                         >
                           {it.outcome}
@@ -776,11 +769,10 @@ export default function AiAssistantPage() {
                 className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.sender === 'user'
-                      ? 'bg-teal-600 text-white rounded-br-none'
-                      : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-none shadow-sm border border-gray-200 dark:border-gray-700'
-                  }`}
+                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${msg.sender === 'user'
+                    ? 'bg-teal-600 text-white rounded-br-none'
+                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-none shadow-sm border border-gray-200 dark:border-gray-700'
+                    }`}
                 >
                   {msg.text}
                 </div>

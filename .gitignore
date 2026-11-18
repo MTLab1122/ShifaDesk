@@ -52,6 +52,10 @@ ehthumbs.db
 .turbo/
 .cache/
 
+# Database backups
+backups/*
+!backups/.gitkeep
+
 # Prisma
 generated/
 prisma/*.db

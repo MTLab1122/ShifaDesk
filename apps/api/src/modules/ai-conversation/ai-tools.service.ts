@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../common/database/prisma.service';
 import { SlotGenerationService } from '../appointment/slot-generation.service';
 import { AppointmentService } from '../appointment/appointment.service';
@@ -11,6 +11,7 @@ export class AiToolsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly slotService: SlotGenerationService,
+    @Inject(forwardRef(() => AppointmentService))
     private readonly appointmentService: AppointmentService,
   ) {}
 

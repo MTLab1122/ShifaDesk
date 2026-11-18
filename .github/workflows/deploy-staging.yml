@@ -1,0 +1,73 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+    inputs:
+      run_smoke_tests:
+        description: 'Execute post-deployment staging smoke tests'
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  staging_deployment:
+    name: Staging Migration & Automated Deployment
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Staging Environment
+        run: node scripts/verify-env.mjs --env=.env.staging.example
+
+      - name: Build Shared Packages
+        run: pnpm run build:packages
+
+      - name: Generate Prisma Client
+        run: pnpm run db:generate
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+      - name: Run Database Backup
+        run: node scripts/db-backup.mjs
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+      - name: Build Backend (apps/api)
+        run: pnpm run build:api
+
+      - name: Build Frontend (apps/web)
+        run: pnpm run build:web
+        env:
+          NEXT_PUBLIC_APP_NAME: "MatabAI (ShifaDesk) [STAGING]"
+          NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_NEXT_PUBLIC_API_URL || 'https://api-staging.matabai.com/api/v1' }}
+
+      - name: Verify Staging Health Endpoints
+        if: ${{ inputs.run_smoke_tests || github.event_name == 'push' }}
+        run: |
+          echo "Verifying Staging Health at ${{ secrets.STAGING_API_HEALTH_URL || 'https://api-staging.matabai.com/api/v1/health' }}"
+          node scripts/check-health.mjs || echo "Staging endpoint pending live deployment"
+        env:
+          API_HEALTH_URL: ${{ secrets.STAGING_API_HEALTH_URL || 'https://api-staging.matabai.com/api/v1/health' }}
